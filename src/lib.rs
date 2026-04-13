@@ -91,6 +91,13 @@ fn bloom_load_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     command_handler::bloom_filter_load(ctx, &args)
 }
 
+
+/// Command handler for CMS.INITBYDIM <key> <width> <depth>
+fn cms_initbydim_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
+    ValkeyResult::Ok("".into())
+    //cms_command_handler::cms_initbydim(ctx, &args)
+}
+
 ///
 /// Module Info
 ///
@@ -112,6 +119,7 @@ valkey_module! {
     deinit: deinitialize,
     acl_categories: [
         "bloom",
+        "cms" //TODO: We'll probably want to move these modules to be separate valkey_module artifacts so bloom doesn't get everything
     ]
     commands: [
         ["BF.ADD", bloom_add_command, "write fast deny-oom", 1, 1, 1, "fast write bloom"],
@@ -122,7 +130,10 @@ valkey_module! {
         ["BF.RESERVE", bloom_reserve_command, "write fast deny-oom", 1, 1, 1, "fast write bloom"],
         ["BF.INFO", bloom_info_command, "readonly fast", 1, 1, 1, "fast read bloom"],
         ["BF.INSERT", bloom_insert_command, "write fast deny-oom", 1, 1, 1, "fast write bloom"],
-        ["BF.LOAD", bloom_load_command, "write deny-oom", 1, 1, 1, "write bloom"]
+        ["BF.LOAD", bloom_load_command, "write deny-oom", 1, 1, 1, "write bloom"],
+
+        ["CMS.INITBYDIM", cms_initbydim_command, "write fast", 1, 1, 1, "fast write cms"],
+
     ],
     configurations: [
         i64: [
