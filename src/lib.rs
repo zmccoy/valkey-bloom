@@ -7,9 +7,11 @@ pub mod bloom;
 pub mod configs;
 pub mod metrics;
 pub mod wrapper;
+pub mod cms;
 use crate::bloom::command_handler;
 use crate::bloom::data_type::BLOOM_TYPE;
 use crate::bloom::utils::valid_server_version;
+use crate::cms::cms_command_handler;
 use valkey_module::ModuleOptions;
 use valkey_module_macros::info_command_handler;
 
@@ -94,9 +96,34 @@ fn bloom_load_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
 
 /// Command handler for CMS.INITBYDIM <key> <width> <depth>
 fn cms_initbydim_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
-    ValkeyResult::Ok("".into())
-    //cms_command_handler::cms_initbydim(ctx, &args)
+    cms_command_handler::cms_initialize_by_dimensions(ctx, args)
 }
+
+/// Command handler for CMS.INITBYPROB <key> <error> <probability>
+fn cms_initbyprob_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
+    cms_command_handler::cms_initialize_by_probability(ctx, args)
+}
+
+/// Command handler for CMS.INCRBY <key> <item> <increment> [<item> <increment> ...]
+fn cms_incrby_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
+    cms_command_handler::cms_increment_by(ctx, args)
+}
+
+/// Command handler for CMS.QUERY <key> <item> [<item> ...]
+fn cms_query_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
+    cms_command_handler::cms_query(ctx, args)
+}
+
+/// Command handler for CMS.INFO <key>
+fn cms_info_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
+    cms_command_handler::cms_info(ctx, args)
+}
+
+/// Command handler for CMS.MERGE <destination> <numkeys> <source> [<source> ...] [WEIGHTS <weight> [<weight> ...]]
+fn cms_merge_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
+    cms_command_handler::cms_merge(ctx, args)
+}
+
 
 ///
 /// Module Info
@@ -132,10 +159,16 @@ valkey_module! {
         ["BF.INSERT", bloom_insert_command, "write fast deny-oom", 1, 1, 1, "fast write bloom"],
         ["BF.LOAD", bloom_load_command, "write deny-oom", 1, 1, 1, "write bloom"],
 
-        ["CMS.INITBYDIM", cms_initbydim_command, "write fast", 1, 1, 1, "fast write cms"],
+        ["CMS.INITBYDIM", cms_initbydim_command, "write fast deny-oom", 1, 1, 1, "fast write cms"],
+        ["CMS.INITBYPROB", cms_initbyprob_command, "write fast deny-oom", 1, 1, 1, "fast write cms"],
+        ["CMS.INCRBY", cms_incrby_command, "write fast deny-oom", 1, 1, 1, "write cms"],
+        ["CMS.QUERY", cms_query_command, "readonly fast", 1, 1, 1, "read cms"],
+        ["CMS.INFO", cms_info_command, "readonly fast", 1, 1, 1, "fase read cms"],
+        ["CMS.MERGE", cms_merge_command, "write deny-oom", 1, 1, 1, "write cms"],
+
 
     ],
-    configurations: [
+    configurations: [ //TODO for CMS values.
         i64: [
             ["bloom-capacity", &*configs::BLOOM_CAPACITY, configs::BLOOM_CAPACITY_DEFAULT, configs::BLOOM_CAPACITY_MIN, configs::BLOOM_CAPACITY_MAX, ConfigurationFlags::DEFAULT, None],
             ["bloom-expansion", &*configs::BLOOM_EXPANSION, configs::BLOOM_EXPANSION_DEFAULT, 0, configs::BLOOM_EXPANSION_MAX as i64, ConfigurationFlags::DEFAULT, None],
