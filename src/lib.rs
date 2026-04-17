@@ -4,10 +4,10 @@ use valkey_module::{
     ValkeyString,
 };
 pub mod bloom;
+pub mod cms;
 pub mod configs;
 pub mod metrics;
 pub mod wrapper;
-pub mod cms;
 use crate::bloom::command_handler;
 use crate::bloom::data_type::BLOOM_TYPE;
 use crate::bloom::utils::valid_server_version;
@@ -93,7 +93,6 @@ fn bloom_load_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     command_handler::bloom_filter_load(ctx, &args)
 }
 
-
 /// Command handler for CMS.INITBYDIM <key> <width> <depth>
 fn cms_initbydim_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     cms_command_handler::cms_initialize_by_dimensions(ctx, args)
@@ -123,7 +122,6 @@ fn cms_info_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
 fn cms_merge_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     cms_command_handler::cms_merge(ctx, args)
 }
-
 
 ///
 /// Module Info
