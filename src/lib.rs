@@ -87,8 +87,7 @@ fn bloom_insert_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult 
     command_handler::bloom_filter_insert(ctx, &args)
 }
 
-/// Command handler for:
-/// BF.LOAD <key> data
+/// Command handler for BF.LOAD <key> data
 fn bloom_load_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     command_handler::bloom_filter_load(ctx, &args)
 }
@@ -144,7 +143,7 @@ valkey_module! {
     deinit: deinitialize,
     acl_categories: [
         "bloom",
-        "cms" //TODO: We'll probably want to move these modules to be separate valkey_module artifacts so bloom doesn't get everything
+        "cms"
     ]
     commands: [
         ["BF.ADD", bloom_add_command, "write fast deny-oom", 1, 1, 1, "fast write bloom"],
@@ -161,7 +160,7 @@ valkey_module! {
         ["CMS.INITBYPROB", cms_initbyprob_command, "write fast deny-oom", 1, 1, 1, "fast write cms"],
         ["CMS.INCRBY", cms_incrby_command, "write fast deny-oom", 1, 1, 1, "write cms"],
         ["CMS.QUERY", cms_query_command, "readonly fast", 1, 1, 1, "read cms"],
-        ["CMS.INFO", cms_info_command, "readonly fast", 1, 1, 1, "fase read cms"],
+        ["CMS.INFO", cms_info_command, "readonly fast", 1, 1, 1, "fast read cms"],
         ["CMS.MERGE", cms_merge_command, "write deny-oom", 1, 1, 1, "write cms"],
 
 

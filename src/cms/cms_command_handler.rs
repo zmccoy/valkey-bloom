@@ -1,8 +1,9 @@
-use valkey_module::{Context, ValkeyError, ValkeyResult, ValkeyString};
+use valkey_module::{Context, ValkeyError, ValkeyResult, ValkeyString, ValkeyValue};
 
 use crate::cms::data_type::CMS_TYPE;
 use crate::cms::utils::{self, CMSObject};
 
+/// Function that implements logic to handle the CMS.INITBYDIM command.
 pub fn cms_initialize_by_dimensions(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     let args_count = args.len();
     if args_count != 4 {
@@ -35,6 +36,7 @@ pub fn cms_initialize_by_dimensions(ctx: &Context, args: Vec<ValkeyString>) -> V
     }
 }
 
+/// Function that implements logic to handle the CMS.INITBYPROB command.
 pub fn cms_initialize_by_probability(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     let args_count = args.len();
     if args_count != 4 {
@@ -69,10 +71,13 @@ pub fn cms_initialize_by_probability(ctx: &Context, args: Vec<ValkeyString>) -> 
     }
 }
 
+
+/// Function that implements logic to handle the CMS.INCRBY command.
 pub fn cms_increment_by(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     todo!();
 }
 
+/// Function that implements logic to handle the CMS.QUERY command.
 pub fn cms_query(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     let argc = args.len();
     if argc < 3 {
@@ -90,6 +95,7 @@ pub fn cms_query(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     todo!();
 }
 
+/// Function that implements logic to handle the CMS.INFO command.
 pub fn cms_info(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     let args_count = args.len();
     if args_count != 2 {
@@ -103,14 +109,24 @@ pub fn cms_info(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         Err(_) => return Err(ValkeyError::WrongType),
     };
 
+    //TODO: Utilize CMSObject
     match cms {
         Some(cms) => {
-            todo!();
+            let result = vec![
+                ValkeyValue::SimpleStringStatic("Width"),
+                ValkeyValue::Integer(0),
+                ValkeyValue::SimpleStringStatic("Depth"),
+                ValkeyValue::Integer(0),
+                ValkeyValue::SimpleStringStatic("Count"),
+                ValkeyValue::Integer(0),
+            ];
+            Ok(ValkeyValue::Array(result))
         }
         None => Err(ValkeyError::Str(utils::NOT_FOUND)),
     }
 }
 
+/// Function that implements logic to handle the CMS.MERGE command.
 pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     todo!();
 }
