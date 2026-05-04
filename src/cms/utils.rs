@@ -1,3 +1,4 @@
+use count_min_sketch::{CountMinSketch64, CountMinSketch8};
 
 /// Client Errors
 pub const ERROR: &str = "ERROR";
@@ -31,8 +32,10 @@ impl CMSError {
 }
 
 pub struct CMSObject {
-    width: u64,
-    depth: u64,
+    pub width: u64,
+    pub depth: u64,
+    pub total: u64,
+    cms: CMS,
 }
 
 impl CMSObject {
@@ -45,8 +48,68 @@ impl CMSObject {
             return Err(CMSError::InvalidDepth);
         }
 
-        //Create CMS
+        let cms = CMS::new_by_probability(10000, 10.8, 1.0)?; //TODO
+        let obj = CMSObject {
+            width,
+            depth,
+            total: 0,
+            cms
+        };
+//        obj.cms_object_incr_metrics_on_new_create();
+        Ok(obj)
+    }
 
-        Ok(todo!())
+    pub fn new_by_probability(error: f64, probability: f64) -> Result<CMSObject, CMSError> {
+        if error <= 0.0 || error >= 1.0 {
+            return Err(CMSError::InvalidErrorRate);
+        }
+        if probability <= 0.0 || probability >= 1.0 {
+            return Err(CMSError::InvalidProbability);
+        }
+
+        // width = ceil(e / error)
+        let width = (std::f64::consts::E / error).ceil() as u64;
+        // depth = ceil(ln(1 / probability))
+        let depth = (1.0_f64 / probability).ln().ceil() as u64;
+
+        let cms = CMS::new_by_probability(width, error, probability)?;
+        let obj = CMSObject {
+            width,
+            depth,
+            total: 0,
+            cms
+        };
+//        obj.cms_object_incr_metrics_on_new_create();
+        Ok(obj)
+    }
+
+    pub fn estimate_frequency(&self, k: &str) -> u64 {
+        self.cms.estimate_frequency(k)
+    }
+
+
+}
+
+
+struct CMS {
+    sketch: CountMinSketch64<String>,
+}
+
+impl CMS {
+
+    pub fn new_by_probability(width: u64, error: f64, probability: f64) -> Result<CMS, CMSError> {
+
+        let tolerance = error;
+        let confidence = 1.0 - probability;
+        let cms = CountMinSketch64::new(width as usize, confidence, tolerance).map_err(|_| CMSError::InvalidWidth)?;
+        Ok(
+            CMS {
+                sketch: cms,
+            }
+        )
+    }
+
+    pub fn estimate_frequency(&self, k: &str) -> u64 {
+        self.sketch.estimate(k)
     }
 }
