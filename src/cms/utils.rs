@@ -87,10 +87,14 @@ impl CMSObject {
         self.cms.estimate_frequency(k)
     }
 
+    pub fn incrementy_by(& mut self, item: &str, increment: u64) -> u64 {
+        self.cms.increment_by(item, increment)
+    }
+
 
 }
 
-
+//TODO: Implement typeclass for CMS usage
 struct CMS {
     sketch: CountMinSketch64<String>,
 }
@@ -111,5 +115,11 @@ impl CMS {
 
     pub fn estimate_frequency(&self, k: &str) -> u64 {
         self.sketch.estimate(k)
+    }
+
+    //TODO Come back to this implementation, where things get composed.
+    pub fn increment_by(& mut self, item: &str, increment: u64) -> u64 {
+        self.sketch.add(item, increment);
+        self.estimate_frequency(item)
     }
 }

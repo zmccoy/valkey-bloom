@@ -100,7 +100,53 @@ pub fn cms_initialize_by_probability(ctx: &Context, args: Vec<ValkeyString>) -> 
 
 /// Function that implements logic to handle the CMS.INCRBY command.
 pub fn cms_increment_by(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
-    todo!();
+    let args_count = args.len();
+    if args_count < 4 {
+        return Err(ValkeyError::WrongArity);
+    }
+
+    let key = &args[1];
+
+    let args_left = args_count - 2;
+    let is_even = args_left % 2 == 0;
+    if !is_even {
+        return Err(ValkeyError::WrongArity)
+    }
+
+    let mut i = 2;
+    let mut pairs: Vec<(&ValkeyString, &ValkeyString)> = Vec::new();
+    while i < args_count {
+        let k = &args[i];
+        let v = &args[i+1];
+        pairs.push((k,v));
+        i+=2
+    }
+
+    let filter_key = ctx.open_key_writable(key);
+    let value = match filter_key.get_value::<CMSObject>(&CMS_TYPE) {
+        Ok(v) => v,
+        Err(_) => return Err(ValkeyError::WrongType),
+    };
+
+    let results = Vec::new();
+    match value {
+        None => Err(ValkeyError::nonexistent_key()),
+        Some(v) => {
+            for (item, increment) in pairs {
+                let key = &item.to_string_lossy(); //TODO:  Do these conversions up above when building the pairs to clean up the code for running.
+                let value = &increment.to_string_lossy().parse::<u64>();
+                let count = v.incrementy_by(key, value);
+                results.push(ValkeyValue::Integer(count as i64)); //Yet again a conversion issue to come back to.
+            }
+            //TODO: Replicate and notify
+            Ok(ValkeyValue::Array(results))
+        }
+    }
+
+
+
+
+
 }
 
 /// Function that implements logic to handle the CMS.QUERY command.
@@ -121,9 +167,14 @@ pub fn cms_query(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     match cms {
         None => Err(ValkeyError::Str("No CMS Exists")),
         Some(v) => {
-            let key = &args[2]; //TODO: This needs to loop through all the rest of the array of args.
-            let estimate = v.estimate_frequency(key.to_string_lossy().as_str());
-            Ok(ValkeyValue::Integer(estimate as i64)) //TODO: What's the correct conversion for all of these
+            let estimates: Vec<ValkeyValue> = args[2..]
+                .iter()
+                .map(|item| {
+                    let estimate = v.estimate_frequency(item.to_string_lossy().as_str());
+                    ValkeyValue::Integer(estimate as i64)
+                })
+                .collect();
+            Ok(ValkeyValue::Array(estimates))
         }
     }
 }
