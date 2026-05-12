@@ -36,7 +36,7 @@ pub fn cms_initialize_by_dimensions(ctx: &Context, args: Vec<ValkeyString>) -> V
                 Err(err) => return Err(ValkeyError::Str(err.as_str())),
             };
 
-           //TODO: Replication Args need done still
+            //TODO: Replication Args need done still
 
             match filter_key.set_value(&CMS_TYPE, cms) {
                 Ok(()) => {
@@ -84,7 +84,7 @@ pub fn cms_initialize_by_probability(ctx: &Context, args: Vec<ValkeyString>) -> 
                 Err(err) => return Err(ValkeyError::Str(err.as_str())),
             };
 
-           //TODO: Replication Args need done still
+            //TODO: Replication Args need done still
             match filter_key.set_value(&CMS_TYPE, cms) {
                 Ok(()) => {
                     //replicate_and_notify_events(ctx, filter_name, false, true, replicate_args);
@@ -92,11 +92,9 @@ pub fn cms_initialize_by_probability(ctx: &Context, args: Vec<ValkeyString>) -> 
                 }
                 Err(_) => Err(ValkeyError::Str(utils::ERROR)),
             }
-
         }
     }
 }
-
 
 /// Function that implements logic to handle the CMS.INCRBY command.
 pub fn cms_increment_by(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
@@ -110,16 +108,16 @@ pub fn cms_increment_by(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult 
     let args_left = args_count - 2;
     let is_even = args_left % 2 == 0;
     if !is_even {
-        return Err(ValkeyError::WrongArity)
+        return Err(ValkeyError::WrongArity);
     }
 
     let mut i = 2;
     let mut pairs: Vec<(&ValkeyString, &ValkeyString)> = Vec::new();
     while i < args_count {
         let k = &args[i];
-        let v = &args[i+1];
-        pairs.push((k,v));
-        i+=2
+        let v = &args[i + 1];
+        pairs.push((k, v));
+        i += 2
     }
 
     let filter_key = ctx.open_key_writable(key);
@@ -128,25 +126,24 @@ pub fn cms_increment_by(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult 
         Err(_) => return Err(ValkeyError::WrongType),
     };
 
-    let results = Vec::new();
+    let mut results = Vec::new();
     match value {
         None => Err(ValkeyError::nonexistent_key()),
         Some(v) => {
             for (item, increment) in pairs {
-                let key = &item.to_string_lossy(); //TODO:  Do these conversions up above when building the pairs to clean up the code for running.
-                let value = &increment.to_string_lossy().parse::<u64>();
-                let count = v.incrementy_by(key, value);
+                let key = &item.to_string_lossy();
+                let parsed_value = &increment.to_string_lossy().parse::<u64>();
+                let value = match parsed_value {
+                    Ok(v) => v,
+                    Err(_) => return Err(ValkeyError::WrongType),
+                };
+                let count = v.incrementy_by(key, value.to_owned());
                 results.push(ValkeyValue::Integer(count as i64)); //Yet again a conversion issue to come back to.
             }
             //TODO: Replicate and notify
             Ok(ValkeyValue::Array(results))
         }
     }
-
-
-
-
-
 }
 
 /// Function that implements logic to handle the CMS.QUERY command.
@@ -193,9 +190,9 @@ pub fn cms_info(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         Err(_) => return Err(ValkeyError::WrongType),
     };
 
-    //TODO: Utilize CMSObject
     match cms {
-        Some(cms) => { //TODO: Rework types on i64 vs u64
+        Some(cms) => {
+            //TODO: Rework types on i64 vs u64
             let result = vec![
                 ValkeyValue::SimpleStringStatic("Width"),
                 ValkeyValue::Integer(cms.width as i64),

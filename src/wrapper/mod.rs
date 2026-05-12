@@ -1,6 +1,7 @@
 use valkey_module::Context;
 
 pub mod bloom_callback;
+//pub mod cms_callback;
 
 /// Wrapper for the ValkeyModule_MustObeyClient function.
 /// Takes in an Context and returns true if the if commands are arriving

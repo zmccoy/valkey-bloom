@@ -1,3 +1,5 @@
+use crate::cms::utils::CMSObject;
+use valkey_module::digest::Digest;
 use valkey_module::native_types::ValkeyType;
 use valkey_module::raw;
 
@@ -5,7 +7,7 @@ const CMS_TYPE_ENCODING_VERSION: i32 = 1;
 
 //Note this is mocked out for now.
 pub static CMS_TYPE: ValkeyType = ValkeyType::new(
-    "count_min_sketch",
+    "cntmnskch",
     CMS_TYPE_ENCODING_VERSION,
     raw::RedisModuleTypeMethods {
         version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
@@ -34,3 +36,18 @@ pub static CMS_TYPE: ValkeyType = ValkeyType::new(
         copy2: None,
     },
 );
+
+pub trait ValkeyDataType {
+    fn load_from_rdb(rdb: *mut raw::RedisModuleIO, encver: i32) -> Option<CMSObject>;
+    fn debug_digest(&self, dig: Digest);
+}
+
+impl ValkeyDataType for CMSObject {
+    fn load_from_rdb(rdb: *mut raw::RedisModuleIO, encver: i32) -> Option<CMSObject> {
+        todo!()
+    }
+
+    fn debug_digest(&self, dig: Digest) {
+        todo!()
+    }
+}

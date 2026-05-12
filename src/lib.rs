@@ -10,8 +10,10 @@ pub mod metrics;
 pub mod wrapper;
 use crate::bloom::command_handler;
 use crate::bloom::data_type::BLOOM_TYPE;
+use crate::cms::data_type::CMS_TYPE;
 use crate::bloom::utils::valid_server_version;
 use crate::cms::cms_command_handler;
+use crate::metrics::cms_info_handler;
 use valkey_module::ModuleOptions;
 use valkey_module_macros::info_command_handler;
 
@@ -127,7 +129,9 @@ fn cms_merge_command(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
 ///
 #[info_command_handler]
 fn info_handler(ctx: &InfoContext, _for_crash_report: bool) -> ValkeyResult<()> {
-    bloom_info_handler(ctx)
+    bloom_info_handler(ctx)?;
+    cms_info_handler(ctx)?;
+    Ok(())
 }
 
 //////////////////////////////////////////////////////
@@ -138,6 +142,7 @@ valkey_module! {
     allocator: (valkey_module::alloc::ValkeyAlloc, valkey_module::alloc::ValkeyAlloc),
     data_types: [
         BLOOM_TYPE,
+        CMS_TYPE,
     ],
     init: initialize,
     deinit: deinitialize,

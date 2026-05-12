@@ -1,4 +1,4 @@
-use count_min_sketch::{CountMinSketch64, CountMinSketch8};
+use count_min_sketch::CountMinSketch64;
 
 /// Client Errors
 pub const ERROR: &str = "ERROR";
@@ -53,9 +53,10 @@ impl CMSObject {
             width,
             depth,
             total: 0,
-            cms
+            cms,
         };
-//        obj.cms_object_incr_metrics_on_new_create();
+
+        obj.cms_object_incr_metrics_on_new_create();
         Ok(obj)
     }
 
@@ -77,9 +78,10 @@ impl CMSObject {
             width,
             depth,
             total: 0,
-            cms
+            cms,
         };
-//        obj.cms_object_incr_metrics_on_new_create();
+
+        obj.cms_object_incr_metrics_on_new_create();
         Ok(obj)
     }
 
@@ -87,10 +89,26 @@ impl CMSObject {
         self.cms.estimate_frequency(k)
     }
 
-    pub fn incrementy_by(& mut self, item: &str, increment: u64) -> u64 {
+    pub fn incrementy_by(&mut self, item: &str, increment: u64) -> u64 {
+        self.total += increment;
         self.cms.increment_by(item, increment)
     }
 
+
+    /// Increments metrics related to Count-min sketch memory usage upon creation of a new sketch.
+    fn cms_object_incr_metrics_on_new_create(&self) {
+        crate::metrics::CMS_NUM_OBJECTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+        crate::metrics::CMS_OBJECT_TOTAL_MEMORY_BYTES.fetch_add(
+            self.cms_object_memory_usage() as usize,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    //Estimate size of the 2 dimensional array as well as what we store in cms_object
+    fn cms_object_memory_usage(&self) -> u64 {
+        (self.width * 8 * self.depth) + 24
+    }
 
 }
 
@@ -100,17 +118,12 @@ struct CMS {
 }
 
 impl CMS {
-
     pub fn new_by_probability(width: u64, error: f64, probability: f64) -> Result<CMS, CMSError> {
-
         let tolerance = error;
         let confidence = 1.0 - probability;
-        let cms = CountMinSketch64::new(width as usize, confidence, tolerance).map_err(|_| CMSError::InvalidWidth)?;
-        Ok(
-            CMS {
-                sketch: cms,
-            }
-        )
+        let cms = CountMinSketch64::new(width as usize, confidence, tolerance)
+            .map_err(|_| CMSError::InvalidWidth)?;
+        Ok(CMS { sketch: cms })
     }
 
     pub fn estimate_frequency(&self, k: &str) -> u64 {
@@ -118,8 +131,9 @@ impl CMS {
     }
 
     //TODO Come back to this implementation, where things get composed.
-    pub fn increment_by(& mut self, item: &str, increment: u64) -> u64 {
+    pub fn increment_by(&mut self, item: &str, increment: u64) -> u64 {
         self.sketch.add(item, increment);
         self.estimate_frequency(item)
     }
+
 }
