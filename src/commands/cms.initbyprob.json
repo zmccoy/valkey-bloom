@@ -1,0 +1,29 @@
+{
+    "CMS.INITBYPROB": {
+        "summary": "Initializes a Count-Min Sketch to accommodate requested tolerances",
+        "complexity": "O(1)",
+        "group": "cms",
+        "module_since": "1.0.0",
+        "arity": 4,
+        "acl_categories": [
+            "FAST",
+            "WRITE",
+            "CMS"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "error",
+                "type": "double"
+            },
+            {
+                "name": "probability",
+                "type": "double"
+            }
+        ]
+    }
+}

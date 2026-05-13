@@ -1,0 +1,46 @@
+{
+    "CMS.MERGE": {
+        "summary": "Merges several sketches into one sketch",
+        "complexity": "O(N) where N is the number of sketches",
+        "group": "cms",
+        "module_since": "1.0.0",
+        "arity": -4,
+        "acl_categories": [
+            "WRITE",
+            "CMS"
+        ],
+        "arguments": [
+            {
+                "name": "destination",
+                "type": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "numkeys",
+                "type": "integer"
+            },
+            {
+                "name": "source",
+                "type": "key",
+                "multiple": true
+            },
+            {
+                "name": "weights",
+                "type": "block",
+                "optional": true,
+                "arguments": [
+                    {
+                        "token": "WEIGHTS",
+                        "name": "weights_token",
+                        "type": "pure-token"
+                    },
+                    {
+                        "name": "weight",
+                        "type": "integer",
+                        "multiple": true
+                    }
+                ]
+            }
+        ]
+    }
+}

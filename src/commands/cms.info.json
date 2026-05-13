@@ -1,0 +1,21 @@
+{
+    "CMS.INFO": {
+        "summary": "Returns width, depth and total count of the sketch",
+        "complexity": "O(1)",
+        "group": "cms",
+        "module_since": "1.0.0",
+        "arity": 2,
+        "acl_categories": [
+            "FAST",
+            "READ",
+            "CMS"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "key_spec_index": 0
+            }
+        ]
+    }
+}

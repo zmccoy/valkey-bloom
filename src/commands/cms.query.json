@@ -1,0 +1,26 @@
+{
+    "CMS.QUERY": {
+        "summary": "Returns the count for one or more items in a sketch",
+        "complexity": "O(N) where N is the number of items",
+        "group": "cms",
+        "module_since": "1.0.0",
+        "arity": -3,
+        "acl_categories": [
+            "FAST",
+            "READ",
+            "CMS"
+        ],
+        "arguments": [
+            {
+                "name": "key",
+                "type": "key",
+                "key_spec_index": 0
+            },
+            {
+                "name": "item",
+                "type": "string",
+                "multiple": true
+            }
+        ]
+    }
+}
