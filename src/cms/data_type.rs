@@ -2,6 +2,7 @@ use crate::cms::utils::CMSObject;
 use valkey_module::digest::Digest;
 use valkey_module::native_types::ValkeyType;
 use valkey_module::raw;
+use crate::wrapper::cms_callback;
 
 const CMS_TYPE_ENCODING_VERSION: i32 = 1;
 
@@ -11,9 +12,9 @@ pub static CMS_TYPE: ValkeyType = ValkeyType::new(
     CMS_TYPE_ENCODING_VERSION,
     raw::RedisModuleTypeMethods {
         version: raw::REDISMODULE_TYPE_METHOD_VERSION as u64,
-        rdb_load: None,
-        rdb_save: None,
-        aof_rewrite: None,
+        rdb_load: Some(cms_callback::cms_rdb_load),
+        rdb_save: Some(cms_callback::cms_rdb_save),
+        aof_rewrite: Some(cms_callback::cms_aof_rewrite),
         digest: None,
 
         mem_usage: None,
