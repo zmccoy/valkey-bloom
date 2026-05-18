@@ -106,7 +106,7 @@ impl CMSObject {
     }
 
     //Estimate size of the 2 dimensional array as well as what we store in cms_object
-    fn cms_object_memory_usage(&self) -> u64 {
+    pub fn cms_object_memory_usage(&self) -> u64 {
         (self.width * 8 * self.depth) + 24
     }
 

@@ -1,6 +1,9 @@
-use crate::bloom;
-use crate::bloom::data_type::ValkeyDataType;
-use crate::bloom::utils::CMSObject;
+use crate::cms::data_type::ValkeyDataType;
+use crate::cms::utils::CMSObject;
+use std::os::raw::{c_int, c_void};
+use valkey_module::raw;
+use valkey_module::logging;
+use std::ptr::null_mut;
 
 // Note: methods in this mod are for the cms module data type callbacks.
 // The reason they are unsafe is because the callback methods are expected to be
@@ -37,4 +40,35 @@ pub unsafe extern "C" fn cms_aof_rewrite(
 pub unsafe extern "C" fn bloom_aux_load(rdb: *mut raw::RedisModuleIO, _encver: c_int, _when: c_int) -> c_int {
    // cms::data_type::cms_rdb_aux_load(rdb)
    todo!()
+}
+
+
+/// Free a cms object
+pub unsafe extern "C" fn cms_free(value: *mut c_void) {
+    drop(Box::from_raw(value.cast::<CMSObject>()));
+}
+
+/// Compute the memory usage for a cms object.
+pub unsafe extern "C" fn cms_mem_usage(value: *const c_void) -> usize {
+    let item = &*value.cast::<CMSObject>();
+    item.cms_object_memory_usage() as usize
+}
+
+/// Raw handler for the COPY command.
+pub unsafe extern "C" fn bloom_copy(
+    _from_key: *mut RedisModuleString,
+    _to_key: *mut RedisModuleString,
+    value: *const c_void,
+) -> *mut c_void {
+    let curr_item = &*value.cast::<CMSObject>();
+    let new_item = CMSObject::create_copy_from(curr_item);
+    let bb = Box::new(new_item);
+    Box::into_raw(bb).cast::<libc::c_void>()
+}
+
+/// Raw handler for the cms digest callback.
+pub unsafe extern "C" fn cms_digest(md: *mut raw::RedisModuleDigest, value: *mut c_void) {
+    let dig = Digest::new(md);
+    let val = &*(value.cast::<CMSObject>());
+    val.debug_digest(dig);
 }
