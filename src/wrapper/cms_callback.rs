@@ -3,7 +3,12 @@ use crate::cms::utils::CMSObject;
 use std::os::raw::{c_int, c_void};
 use valkey_module::raw;
 use valkey_module::logging;
+use valkey_module::RedisModuleDefragCtx;
 use std::ptr::null_mut;
+use valkey_module::RedisModuleString;
+use valkey_module::digest::Digest;
+
+
 
 // Note: methods in this mod are for the cms module data type callbacks.
 // The reason they are unsafe is because the callback methods are expected to be
@@ -55,7 +60,7 @@ pub unsafe extern "C" fn cms_mem_usage(value: *const c_void) -> usize {
 }
 
 /// Raw handler for the COPY command.
-pub unsafe extern "C" fn bloom_copy(
+pub unsafe extern "C" fn cms_copy(
     _from_key: *mut RedisModuleString,
     _to_key: *mut RedisModuleString,
     value: *const c_void,
@@ -71,4 +76,17 @@ pub unsafe extern "C" fn cms_digest(md: *mut raw::RedisModuleDigest, value: *mut
     let dig = Digest::new(md);
     let val = &*(value.cast::<CMSObject>());
     val.debug_digest(dig);
+}
+
+pub unsafe extern "C" fn cms_aux_load(rdb: *mut raw::RedisModuleIO, _encver: c_int, _when: c_int) -> c_int {
+    todo!()
+}
+
+pub unsafe extern "C" fn cms_free_effort(rdb: *mut raw::RedisModuleString, value: *const c_void) -> usize {
+    let curr_item = &*value.cast::<CMSObject>();
+    curr_item.free_effort()
+}
+
+pub unsafe extern "C" fn cms_defrag(defrag_ctx: *mut RedisModuleDefragCtx, _from_key: *mut RedisModuleString, value: *mut *mut c_void) -> i32 {
+    todo!()
 }

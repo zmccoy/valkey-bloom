@@ -110,6 +110,14 @@ impl CMSObject {
         (self.width * 8 * self.depth) + 24
     }
 
+    pub fn create_copy_from(from_cms: &CMSObject) -> CMSObject {
+        todo!()
+    }
+
+    pub fn free_effort(&self) -> usize {
+       todo!() //What would be the free effort for cms?
+    }
+
 }
 
 //TODO: Implement typeclass for CMS usage

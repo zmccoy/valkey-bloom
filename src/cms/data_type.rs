@@ -15,21 +15,21 @@ pub static CMS_TYPE: ValkeyType = ValkeyType::new(
         rdb_load: Some(cms_callback::cms_rdb_load),
         rdb_save: Some(cms_callback::cms_rdb_save),
         aof_rewrite: Some(cms_callback::cms_aof_rewrite),
-        digest: None,
+        digest: Some(cms_callback::cms_digest),
 
-        mem_usage: None,
-        free: None,
+        mem_usage: Some(cms_callback::cms_mem_usage),
+        free: Some(cms_callback::cms_free),
 
-        aux_load: None,
+        aux_load: Some(cms_callback::cms_aux_load),
 
         aux_save: None,
         aux_save2: None,
         aux_save_triggers: raw::Aux::Before as i32,
 
-        free_effort: None,
+        free_effort: Some(cms_callback::cms_free_effort),
         unlink: None,
-        copy: None,
-        defrag: None,
+        copy: Some(cms_callback::cms_copy),
+        defrag: Some(cms_callback::cms_defrag),
 
         mem_usage2: None,
         free_effort2: None,
