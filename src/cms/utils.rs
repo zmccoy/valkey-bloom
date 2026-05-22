@@ -60,20 +60,22 @@ impl CMSObject {
         Ok(obj)
     }
 
-    pub fn new_by_probability(error: f64, probability: f64) -> Result<CMSObject, CMSError> {
-        if error <= 0.0 || error >= 1.0 {
+    //Error_tolerance is
+    // Probability_confidence is the confidence of
+    pub fn new_by_probability(error_tolerance: f64, probability_confidence: f64) -> Result<CMSObject, CMSError> {
+        if error_tolerance <= 0.0 || error_tolerance >= 1.0 {
             return Err(CMSError::InvalidErrorRate);
         }
-        if probability <= 0.0 || probability >= 1.0 {
+        if probability_confidence <= 0.0 || probability_confidence >= 1.0 {
             return Err(CMSError::InvalidProbability);
         }
 
         // width = ceil(e / error)
-        let width = (std::f64::consts::E / error).ceil() as u64;
-        // depth = ceil(ln(1 / probability))
-        let depth = (1.0_f64 / probability).ln().ceil() as u64;
+        let width = (std::f64::consts::E / error_tolerance).ceil() as u64;
+        // depth = ceil(ln(1 / probability_confidence))
+        let depth = (1.0_f64 / probability_confidence).ln().ceil() as u64;
 
-        let cms = CMS::new_by_probability(width, error, probability)?;
+        let cms = CMS::new_by_probability(width, error_tolerance, probability_confidence)?;
         let obj = CMSObject {
             width,
             depth,
