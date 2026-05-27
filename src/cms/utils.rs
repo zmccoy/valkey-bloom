@@ -60,22 +60,22 @@ impl CMSObject {
         Ok(obj)
     }
 
-    //Error_tolerance is
-    // Probability_confidence is the confidence of
-    pub fn new_by_probability(error_tolerance: f64, probability_confidence: f64) -> Result<CMSObject, CMSError> {
+    //Error_tolerance is max variance of the count
+    // probability is the false positive rate
+    pub fn new_by_probability(error_tolerance: f64, probability: f64) -> Result<CMSObject, CMSError> {
         if error_tolerance <= 0.0 || error_tolerance >= 1.0 {
             return Err(CMSError::InvalidErrorRate);
         }
-        if probability_confidence <= 0.0 || probability_confidence >= 1.0 {
+        if probability <= 0.0 || probability >= 1.0 {
             return Err(CMSError::InvalidProbability);
         }
 
         // width = ceil(e / error)
         let width = (std::f64::consts::E / error_tolerance).ceil() as u64;
         // depth = ceil(ln(1 / probability_confidence))
-        let depth = (1.0_f64 / probability_confidence).ln().ceil() as u64;
+        let depth = (1.0_f64 / probability).ln().ceil() as u64;
 
-        let cms = CMS::new_by_probability(width, error_tolerance, probability_confidence)?;
+        let cms = CMS::new_by_probability(width, error_tolerance, probability)?;
         let obj = CMSObject {
             width,
             depth,
@@ -128,10 +128,20 @@ struct CMS {
 }
 
 impl CMS {
-    pub fn new_by_probability(width: u64, error: f64, probability: f64) -> Result<CMS, CMSError> {
-        let tolerance = error;
+
+    pub fn new_by_probability(width: u64, epsilon: f64, probability: f64) -> Result<CMS, CMSError> {
         let confidence = 1.0 - probability;
-        let cms = CountMinSketch64::new(width as usize, confidence, tolerance)
+        //Implementation details for method ::new in CMS lib:
+        // Capacity in the library is the stream size N.  We do NOT know this with the Redis APIs today,
+        // Probability is the expected success rate to be within the bounds for count
+        // Tolerance is the expected numerical difference in count vs estimated number.  The lib calculates epsilon from capacity and tolerance.
+        //
+        // epsilon = tolerance / capacity
+        // capacity * epsilon = tolerance
+        // Assuming capacity of 1 to make sure the ratio is correct for optimal_width, the internal method
+
+
+        let cms = CountMinSketch64::new(width as usize, confidence, 1 as f64)
             .map_err(|_| CMSError::InvalidWidth)?;
         Ok(CMS { sketch: cms })
     }

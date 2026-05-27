@@ -58,12 +58,16 @@ pub fn cms_initialize_by_probability(ctx: &Context, args: Vec<ValkeyString>) -> 
 
     let key = &args[1];
 
+    // Maximum allowable error rate.  Epsilon
+    // For an epsilon of 1% and a estimated count of 1000 the actual could be between 990 and 1010
     let error_rate = match args[2].to_string_lossy().parse::<f64>() {
         Ok(e) if e > 0.0 && e < 1.0 => e,
         Ok(_) => return Err(ValkeyError::Str(utils::ERROR_RATE_RANGE)),
         Err(_) => return Err(ValkeyError::Str(utils::BAD_ERROR_RATE)),
     };
 
+    //False positive rate. Delta
+    // A delta of 1% means the count will be outside of the epsilon range 1% of the time.
     let probability = match args[3].to_string_lossy().parse::<f64>() {
         Ok(p) if p > 0.0 && p < 1.0 => p,
         Ok(_) => return Err(ValkeyError::Str(utils::PROBABILITY_RANGE)),
