@@ -1,8 +1,8 @@
 use crate::cms::utils::CMSObject;
+use crate::wrapper::cms_callback;
 use valkey_module::digest::Digest;
 use valkey_module::native_types::ValkeyType;
 use valkey_module::raw;
-use crate::wrapper::cms_callback;
 
 const CMS_TYPE_ENCODING_VERSION: i32 = 1;
 

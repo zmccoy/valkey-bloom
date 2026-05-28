@@ -1,0 +1,77 @@
+import pytest
+from valkey import ResponseError
+from valkey_bloom_test_case import ValkeyBloomTestCaseBase
+
+class TestCMSCommand(ValkeyBloomTestCaseBase):
+
+    def verify_command_arity(self, command, expected_arity):
+        command_info = self.client.execute_command('COMMAND', 'INFO', command)
+        actual_arity = command_info.get(command).get('arity')
+        assert actual_arity == expected_arity, f"Arity mismatch for command '{command}'"
+
+    def test_cms_command_arity(self):
+        self.verify_command_arity('CMS.INITBYDIM', 4)
+        self.verify_command_arity('CMS.INITBYPROB', 4)
+        self.verify_command_arity('CMS.INCRBY', -4)
+        self.verify_command_arity('CMS.QUERY', -3)
+        self.verify_command_arity('CMS.INFO', 2)
+        self.verify_command_arity('CMS.MERGE', -4)
+
+    def test_cms_command_error(self):
+
+        assert self.client.execute_command('CMS.INITBYDIM sketch 1000 5') == b'OK'
+
+        basic_error_test_cases = [
+            # not found
+            ('CMS.INFO notfound', 'not found'),
+
+            # incorrect syntax and argument usage
+            ('CMS.INITBYDIM sketch 1000 5', 'item exists'),
+            ('CMS.INITBYDIM newsketch abc 5', 'bad width'),
+            ('CMS.INITBYDIM newsketch 1000 abc', 'bad depth'),
+            ('CMS.INITBYDIM newsketch 0 5', 'width and depth must be positive'),
+            ('CMS.INITBYDIM newsketch 1000 0', 'width and depth must be positive'),
+            ('CMS.INITBYDIM newsketch -1 5', 'bad width'),
+            ('CMS.INITBYDIM newsketch 1000 -1', 'bad depth'),
+
+            ('CMS.INITBYPROB newsketch abc 0.01', 'bad error rate'),
+            ('CMS.INITBYPROB newsketch 0.01 abc', 'bad probability'),
+            ('CMS.INITBYPROB newsketch 0 0.01', 'error rate and probability must be between 0 and 1 exclusive'),
+            ('CMS.INITBYPROB newsketch 1 0.01', 'error rate and probability must be between 0 and 1 exclusive'),
+            ('CMS.INITBYPROB newsketch 0.01 0', 'error rate and probability must be between 0 and 1 exclusive'),
+            ('CMS.INITBYPROB newsketch 0.01 1', 'error rate and probability must be between 0 and 1 exclusive'),
+
+            ('CMS.INCRBY sketch item abc', 'bad increment'),
+            ('CMS.INCRBY sketch item -1', 'increment must be positive'),
+
+            # wrong number of arguments
+            ('CMS.INITBYDIM', 'wrong number of arguments for \'CMS.INITBYDIM\' command'),
+            ('CMS.INITBYDIM key', 'wrong number of arguments for \'CMS.INITBYDIM\' command'),
+            ('CMS.INITBYDIM key 1000', 'wrong number of arguments for \'CMS.INITBYDIM\' command'),
+            ('CMS.INITBYDIM key 1000 5 extra', 'wrong number of arguments for \'CMS.INITBYDIM\' command'),
+
+            ('CMS.INITBYPROB', 'wrong number of arguments for \'CMS.INITBYPROB\' command'),
+            ('CMS.INITBYPROB key', 'wrong number of arguments for \'CMS.INITBYPROB\' command'),
+            ('CMS.INITBYPROB key 0.01', 'wrong number of arguments for \'CMS.INITBYPROB\' command'),
+            ('CMS.INITBYPROB key 0.01 0.01 extra', 'wrong number of arguments for \'CMS.INITBYPROB\' command'),
+
+            ('CMS.INCRBY', 'wrong number of arguments for \'CMS.INCRBY\' command'),
+            ('CMS.INCRBY key', 'wrong number of arguments for \'CMS.INCRBY\' command'),
+            ('CMS.INCRBY key item', 'wrong number of arguments for \'CMS.INCRBY\' command'),
+            ('CMS.INCRBY key item 1 item2', 'wrong number of arguments for \'CMS.INCRBY\' command'),
+
+            ('CMS.QUERY', 'wrong number of arguments for \'CMS.QUERY\' command'),
+            ('CMS.QUERY key', 'wrong number of arguments for \'CMS.QUERY\' command'),
+
+            ('CMS.INFO', 'wrong number of arguments for \'CMS.INFO\' command'),
+            ('CMS.INFO key extra', 'wrong number of arguments for \'CMS.INFO\' command'),
+
+            ('CMS.MERGE', 'wrong number of arguments for \'CMS.MERGE\' command'),
+            ('CMS.MERGE dest', 'wrong number of arguments for \'CMS.MERGE\' command'),
+            ('CMS.MERGE dest 1', 'wrong number of arguments for \'CMS.MERGE\' command'),
+        ]
+
+        for test_case in basic_error_test_cases:
+            cmd = test_case[0]
+            expected_err_reply = test_case[1]
+            self.verify_error_response(self.client, cmd, expected_err_reply)

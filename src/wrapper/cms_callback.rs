@@ -1,14 +1,12 @@
 use crate::cms::data_type::ValkeyDataType;
 use crate::cms::utils::CMSObject;
 use std::os::raw::{c_int, c_void};
-use valkey_module::raw;
-use valkey_module::logging;
-use valkey_module::RedisModuleDefragCtx;
 use std::ptr::null_mut;
-use valkey_module::RedisModuleString;
 use valkey_module::digest::Digest;
-
-
+use valkey_module::logging;
+use valkey_module::raw;
+use valkey_module::RedisModuleDefragCtx;
+use valkey_module::RedisModuleString;
 
 // Note: methods in this mod are for the cms module data type callbacks.
 // The reason they are unsafe is because the callback methods are expected to be
@@ -19,8 +17,7 @@ pub unsafe extern "C" fn cms_rdb_save(rdb: *mut raw::RedisModuleIO, value: *mut 
     todo!()
 }
 
-
-pub unsafe extern "C" fn cms_rdb_load(rdb: *mut raw::RedisModuleIO, encver: c_int,) -> *mut c_void {
+pub unsafe extern "C" fn cms_rdb_load(rdb: *mut raw::RedisModuleIO, encver: c_int) -> *mut c_void {
     if let Some(item) = <CMSObject as ValkeyDataType>::load_from_rdb(rdb, encver) {
         let bc = Box::new(item);
         Box::into_raw(bc).cast::<libc::c_void>()
@@ -42,11 +39,14 @@ pub unsafe extern "C" fn cms_aof_rewrite(
     todo!()
 }
 
-pub unsafe extern "C" fn bloom_aux_load(rdb: *mut raw::RedisModuleIO, _encver: c_int, _when: c_int) -> c_int {
-   // cms::data_type::cms_rdb_aux_load(rdb)
-   todo!()
+pub unsafe extern "C" fn bloom_aux_load(
+    rdb: *mut raw::RedisModuleIO,
+    _encver: c_int,
+    _when: c_int,
+) -> c_int {
+    // cms::data_type::cms_rdb_aux_load(rdb)
+    todo!()
 }
-
 
 /// Free a cms object
 pub unsafe extern "C" fn cms_free(value: *mut c_void) {
@@ -78,15 +78,26 @@ pub unsafe extern "C" fn cms_digest(md: *mut raw::RedisModuleDigest, value: *mut
     val.debug_digest(dig);
 }
 
-pub unsafe extern "C" fn cms_aux_load(rdb: *mut raw::RedisModuleIO, _encver: c_int, _when: c_int) -> c_int {
+pub unsafe extern "C" fn cms_aux_load(
+    rdb: *mut raw::RedisModuleIO,
+    _encver: c_int,
+    _when: c_int,
+) -> c_int {
     todo!()
 }
 
-pub unsafe extern "C" fn cms_free_effort(rdb: *mut raw::RedisModuleString, value: *const c_void) -> usize {
+pub unsafe extern "C" fn cms_free_effort(
+    rdb: *mut raw::RedisModuleString,
+    value: *const c_void,
+) -> usize {
     let curr_item = &*value.cast::<CMSObject>();
     curr_item.free_effort()
 }
 
-pub unsafe extern "C" fn cms_defrag(defrag_ctx: *mut RedisModuleDefragCtx, _from_key: *mut RedisModuleString, value: *mut *mut c_void) -> i32 {
+pub unsafe extern "C" fn cms_defrag(
+    defrag_ctx: *mut RedisModuleDefragCtx,
+    _from_key: *mut RedisModuleString,
+    value: *mut *mut c_void,
+) -> i32 {
     todo!()
 }

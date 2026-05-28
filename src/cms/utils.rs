@@ -62,7 +62,10 @@ impl CMSObject {
 
     //Error_tolerance is max variance of the count
     // probability is the false positive rate
-    pub fn new_by_probability(error_tolerance: f64, probability: f64) -> Result<CMSObject, CMSError> {
+    pub fn new_by_probability(
+        error_tolerance: f64,
+        probability: f64,
+    ) -> Result<CMSObject, CMSError> {
         if error_tolerance <= 0.0 || error_tolerance >= 1.0 {
             return Err(CMSError::InvalidErrorRate);
         }
@@ -96,7 +99,6 @@ impl CMSObject {
         self.cms.increment_by(item, increment)
     }
 
-
     /// Increments metrics related to Count-min sketch memory usage upon creation of a new sketch.
     fn cms_object_incr_metrics_on_new_create(&self) {
         crate::metrics::CMS_NUM_OBJECTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -117,9 +119,8 @@ impl CMSObject {
     }
 
     pub fn free_effort(&self) -> usize {
-       todo!() //What would be the free effort for cms?
+        todo!() //What would be the free effort for cms?
     }
-
 }
 
 //TODO: Implement typeclass for CMS usage
@@ -128,7 +129,6 @@ struct CMS {
 }
 
 impl CMS {
-
     pub fn new_by_probability(width: u64, epsilon: f64, probability: f64) -> Result<CMS, CMSError> {
         let confidence = 1.0 - probability;
         //Implementation details for method ::new in CMS lib:
@@ -139,7 +139,6 @@ impl CMS {
         // epsilon = tolerance / capacity
         // capacity * epsilon = tolerance
         // Assuming capacity of 1 to make sure the ratio is correct for optimal_width, the internal method
-
 
         let cms = CountMinSketch64::new(width as usize, confidence, 1 as f64)
             .map_err(|_| CMSError::InvalidWidth)?;
@@ -155,5 +154,4 @@ impl CMS {
         self.sketch.add(item, increment);
         self.estimate_frequency(item)
     }
-
 }
