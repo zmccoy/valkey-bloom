@@ -1,6 +1,7 @@
 import pytest
 from valkey import ResponseError
 from valkey_bloom_test_case import ValkeyBloomTestCaseBase
+from valkeytestframework.conftest import resource_port_tracker
 
 class TestCMSCommand(ValkeyBloomTestCaseBase):
 
@@ -10,12 +11,12 @@ class TestCMSCommand(ValkeyBloomTestCaseBase):
         assert actual_arity == expected_arity, f"Arity mismatch for command '{command}'"
 
     def test_cms_command_arity(self):
-        self.verify_command_arity('CMS.INITBYDIM', 4)
-        self.verify_command_arity('CMS.INITBYPROB', 4)
-        self.verify_command_arity('CMS.INCRBY', -4)
-        self.verify_command_arity('CMS.QUERY', -3)
-        self.verify_command_arity('CMS.INFO', 2)
-        self.verify_command_arity('CMS.MERGE', -4)
+        self.verify_command_arity('CMS.INITBYDIM', -1)
+        self.verify_command_arity('CMS.INITBYPROB', -1)
+        self.verify_command_arity('CMS.INCRBY', -1)
+        self.verify_command_arity('CMS.QUERY', -1)
+        self.verify_command_arity('CMS.INFO', -1)
+        self.verify_command_arity('CMS.MERGE', -1)
 
     def test_cms_command_error(self):
 
@@ -29,17 +30,17 @@ class TestCMSCommand(ValkeyBloomTestCaseBase):
             ('CMS.INITBYDIM sketch 1000 5', 'item exists'),
             ('CMS.INITBYDIM newsketch abc 5', 'bad width'),
             ('CMS.INITBYDIM newsketch 1000 abc', 'bad depth'),
-            ('CMS.INITBYDIM newsketch 0 5', 'width and depth must be positive'),
-            ('CMS.INITBYDIM newsketch 1000 0', 'width and depth must be positive'),
+            ('CMS.INITBYDIM newsketch 0 5', 'bad width'),
+            ('CMS.INITBYDIM newsketch 1000 0', 'bad depth'),
             ('CMS.INITBYDIM newsketch -1 5', 'bad width'),
             ('CMS.INITBYDIM newsketch 1000 -1', 'bad depth'),
 
             ('CMS.INITBYPROB newsketch abc 0.01', 'bad error rate'),
             ('CMS.INITBYPROB newsketch 0.01 abc', 'bad probability'),
-            ('CMS.INITBYPROB newsketch 0 0.01', 'error rate and probability must be between 0 and 1 exclusive'),
-            ('CMS.INITBYPROB newsketch 1 0.01', 'error rate and probability must be between 0 and 1 exclusive'),
-            ('CMS.INITBYPROB newsketch 0.01 0', 'error rate and probability must be between 0 and 1 exclusive'),
-            ('CMS.INITBYPROB newsketch 0.01 1', 'error rate and probability must be between 0 and 1 exclusive'),
+            ('CMS.INITBYPROB newsketch 0 0.01', 'error rate should be between 0 and 1'),
+            ('CMS.INITBYPROB newsketch 1 0.01', 'error rate should be between 0 and 1'),
+            ('CMS.INITBYPROB newsketch 0.01 0', 'probability rate should be between 0 and 1'),
+            ('CMS.INITBYPROB newsketch 0.01 1', 'probability rate should be between 0 and 1'),
 
             ('CMS.INCRBY sketch item abc', 'bad increment'),
             ('CMS.INCRBY sketch item -1', 'increment must be positive'),

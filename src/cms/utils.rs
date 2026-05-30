@@ -11,6 +11,8 @@ pub const ERROR_RATE_RANGE: &str = "ERR error rate should be between 0 and 1";
 pub const BAD_PROBABILITY: &str = "ERR bad probability";
 pub const PROBABILITY_RANGE: &str = "ERR probability rate should be between 0 and 1";
 pub const KEY_EXISTS: &str = "ERR Target key name already exists.";
+pub const BAD_INCREMENT: &str = "ERR bad increment";
+pub const INCREMENT_MUST_BE_POSITIVE: &str = "ERR increment must be positive";
 
 #[derive(Debug, PartialEq)]
 pub enum CMSError {
