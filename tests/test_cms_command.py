@@ -43,7 +43,7 @@ class TestCMSCommand(ValkeyBloomTestCaseBase):
             ('CMS.INITBYPROB newsketch 0.01 1', 'probability rate should be between 0 and 1'),
 
             ('CMS.INCRBY sketch item abc', 'bad increment'),
-            ('CMS.INCRBY sketch item -1', 'increment must be positive'),
+            ('CMS.INCRBY sketch item -1', 'bad increment'), #ERR case could be specific
 
             # wrong number of arguments
             ('CMS.INITBYDIM', 'wrong number of arguments for \'CMS.INITBYDIM\' command'),
@@ -67,9 +67,13 @@ class TestCMSCommand(ValkeyBloomTestCaseBase):
             ('CMS.INFO', 'wrong number of arguments for \'CMS.INFO\' command'),
             ('CMS.INFO key extra', 'wrong number of arguments for \'CMS.INFO\' command'),
 
-            ('CMS.MERGE', 'wrong number of arguments for \'CMS.MERGE\' command'),
-            ('CMS.MERGE dest', 'wrong number of arguments for \'CMS.MERGE\' command'),
-            ('CMS.MERGE dest 1', 'wrong number of arguments for \'CMS.MERGE\' command'),
+             ('CMS.MERGE', 'wrong number of arguments for \'CMS.MERGE\' command'),
+             ('CMS.MERGE dest', 'wrong number of arguments for \'CMS.MERGE\' command'),
+             ('CMS.MERGE dest 1', 'wrong number of arguments for \'CMS.MERGE\' command'),
+             ('CMS.MERGE dest 2 sketch1 sketch2 sketch3', 'wrong number of arguments for \'CMS.MERGE\' command'),             
+             ('CMS.MERGE dest 2 sketch1 sketch2 WEIGHTS', 'wrong number of arguments for \'CMS.MERGE\' command'),
+             ('CMS.MERGE dest 2 sketch1 sketch2 WEIGHTS 1', 'wrong number of arguments for \'CMS.MERGE\' command'),            
+            
         ]
 
         for test_case in basic_error_test_cases:

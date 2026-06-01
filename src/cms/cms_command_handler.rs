@@ -139,7 +139,7 @@ pub fn cms_increment_by(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult 
                 let parsed_value = &increment.to_string_lossy().parse::<u64>();
                 let value = match parsed_value {
                     Ok(v) => v,
-                    Err(_) => return Err(ValkeyError::WrongType),
+                    Err(_) => return Err(ValkeyError::Str(utils::BAD_INCREMENT)),
                 };
                 let count = v.incrementy_by(key, value.to_owned());
                 results.push(ValkeyValue::Integer(count as i64)); //Yet again a conversion issue to come back to.
@@ -213,5 +213,76 @@ pub fn cms_info(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
 
 /// Function that implements logic to handle the CMS.MERGE command.
 pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
-    todo!();
+    let args_count = args.len();
+    if args_count < 5 {
+        return Err(ValkeyError::WrongArity);
+    }
+
+    let destination_key = &args[1];
+    let number_of_keys = &args[2].to_string_lossy().clone(); //Come back to this to clean up the clone
+    let number_of_keys_value = match number_of_keys.parse::<usize>() {
+        Ok(v) => v,
+        Err(_) => return Err(ValkeyError::WrongType),
+    };
+
+    //Indexes 3 -> 3 + N are keys to merge
+    let sketch_start_index: usize = 3;
+    let sketch_end_index = sketch_start_index + number_of_keys_value - 1;
+
+    let p: Vec<String> = args.clone().iter().map(|a| a.to_string_lossy()).collect();
+    println!("Incoming args: {:?}", p);
+
+    let source_keys: Vec<&ValkeyString> = args[sketch_start_index..sketch_end_index + 1]
+        .iter()
+        .collect();
+
+    let p2: Vec<String> = source_keys.iter().map(|a| a.to_string_lossy()).collect();
+    println!("Source Keys: {:?}", p2);
+
+    //Then Parse the optional WEIGHTS section of the command.  WEIGHTS is at sketch_end + 1
+
+    println!(
+        "At Sketch_End is {:?}",
+        args[sketch_end_index].to_string_lossy()
+    );
+
+    if sketch_end_index + 1 == args_count {
+        return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
+    } else {
+        //Add an else for the rest of things then
+
+        //Make sure we have at least WEIGHT weight left
+        let weight_args_left = args_count - (sketch_end_index + 1);
+        if weight_args_left < 2 {
+            return Err(ValkeyError::WrongArity);
+        }
+
+        if sketch_end_index + 1 < args_count {
+            //There should be at least 2 args left WEIGHT weight [weight ...]
+            let weights_keyword_index = sketch_end_index + 1;
+            let weights_keyword = args[weights_keyword_index].to_string_lossy();
+            if weights_keyword.to_uppercase() != "WEIGHTS" {
+                return Err(ValkeyError::Str("ERR invalid argument"));
+            }
+            let weights_start = weights_keyword_index + 1;
+            let weights_args = args[weights_start..].iter();
+            
+            //It is valid to have less than the number of sketches for the weights they are filled in with 1.0
+            if weights_args.len() < 1 {
+                return Err(ValkeyError::WrongArity);
+            }
+
+            let mut weights: Vec<f64> = Vec::new();
+            for (weight_arg) in weights_args {
+                let weight = match weight_arg.to_string_lossy().parse::<f64>() {
+                    Ok(w) => w,
+                    Err(_) => return Err(ValkeyError::Str("ERR invalid weight value")),
+                };
+                weights.push(weight);
+            }
+            //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
+            println!("Weights: {:?}", weights);
+            return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
+        }
+    }
 }

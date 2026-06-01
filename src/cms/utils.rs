@@ -123,6 +123,10 @@ impl CMSObject {
     pub fn free_effort(&self) -> usize {
         todo!() //What would be the free effort for cms?
     }
+
+    pub fn merge() -> CMSObject {
+        todo!()
+    }
 }
 
 //TODO: Implement typeclass for CMS usage
