@@ -276,6 +276,8 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         }
         //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
         println!("Weights: {:?}", weights);
+
+        //TODO:  Pull the CMSObjects from Redis
         return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
     }
 }
