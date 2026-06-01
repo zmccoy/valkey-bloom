@@ -249,40 +249,33 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     if sketch_end_index + 1 == args_count {
         return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
     } else {
-        //Add an else for the rest of things then
-
+        
         //Make sure we have at least WEIGHT weight left
         let weight_args_left = args_count - (sketch_end_index + 1);
         if weight_args_left < 2 {
             return Err(ValkeyError::WrongArity);
         }
 
-        if sketch_end_index + 1 < args_count {
-            //There should be at least 2 args left WEIGHT weight [weight ...]
-            let weights_keyword_index = sketch_end_index + 1;
-            let weights_keyword = args[weights_keyword_index].to_string_lossy();
-            if weights_keyword.to_uppercase() != "WEIGHTS" {
-                return Err(ValkeyError::Str("ERR invalid argument"));
-            }
-            let weights_start = weights_keyword_index + 1;
-            let weights_args = args[weights_start..].iter();
-            
-            //It is valid to have less than the number of sketches for the weights they are filled in with 1.0
-            if weights_args.len() < 1 {
-                return Err(ValkeyError::WrongArity);
-            }
-
-            let mut weights: Vec<f64> = Vec::new();
-            for (weight_arg) in weights_args {
-                let weight = match weight_arg.to_string_lossy().parse::<f64>() {
-                    Ok(w) => w,
-                    Err(_) => return Err(ValkeyError::Str("ERR invalid weight value")),
-                };
-                weights.push(weight);
-            }
-            //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
-            println!("Weights: {:?}", weights);
-            return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
+        //There should be at least 2 args left WEIGHT weight [weight ...]
+        let weights_keyword_index = sketch_end_index + 1;
+        let weights_keyword = args[weights_keyword_index].to_string_lossy();
+        if weights_keyword.to_uppercase() != "WEIGHTS" {
+            return Err(ValkeyError::Str("ERR invalid argument"));
         }
+        let weights_start = weights_keyword_index + 1;
+        let weights_args = args[weights_start..].iter();
+
+        //It is valid to have less than the number of sketches for the weights they are filled in with 1.0
+        let mut weights: Vec<f64> = Vec::new();
+        for (weight_arg) in weights_args {
+            let weight = match weight_arg.to_string_lossy().parse::<f64>() {
+                Ok(w) => w,
+                Err(_) => return Err(ValkeyError::Str("ERR invalid weight value")),
+            };
+            weights.push(weight);
+        }
+        //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
+        println!("Weights: {:?}", weights);
+        return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
     }
 }

@@ -71,9 +71,7 @@ class TestCMSCommand(ValkeyBloomTestCaseBase):
              ('CMS.MERGE dest', 'wrong number of arguments for \'CMS.MERGE\' command'),
              ('CMS.MERGE dest 1', 'wrong number of arguments for \'CMS.MERGE\' command'),
              ('CMS.MERGE dest 2 sketch1 sketch2 sketch3', 'wrong number of arguments for \'CMS.MERGE\' command'),             
-             ('CMS.MERGE dest 2 sketch1 sketch2 WEIGHTS', 'wrong number of arguments for \'CMS.MERGE\' command'),
-             ('CMS.MERGE dest 2 sketch1 sketch2 WEIGHTS 1', 'wrong number of arguments for \'CMS.MERGE\' command'),            
-            
+             ('CMS.MERGE dest 2 sketch1 sketch2 WEIGHTS', 'wrong number of arguments for \'CMS.MERGE\' command'),            
         ]
 
         for test_case in basic_error_test_cases:
