@@ -249,7 +249,6 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     if sketch_end_index + 1 == args_count {
         return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
     } else {
-        
         //Make sure we have at least WEIGHT weight left
         let weight_args_left = args_count - (sketch_end_index + 1);
         if weight_args_left < 2 {
@@ -277,18 +276,19 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
         println!("Weights: {:?}", weights);
 
-        let source_key_handles: Vec<_> = source_keys
-            .iter()
-            .map(|key| ctx.open_key(key))
-            .collect();
+        let source_key_handles: Vec<_> = source_keys.iter().map(|key| ctx.open_key(key)).collect();
         let sketches_result: Result<Vec<&CMSObject>, ValkeyError> = source_key_handles
             .iter()
-            .map(|key_handle| key_handle.get_value::<CMSObject>(&CMS_TYPE).and_then(|opt| opt.ok_or_else(|| ValkeyError::Str("ERR key does not exist"))))
+            .map(|key_handle| {
+                key_handle
+                    .get_value::<CMSObject>(&CMS_TYPE)
+                    .and_then(|opt| opt.ok_or_else(|| ValkeyError::Str("ERR key does not exist")))
+            })
             .collect();
 
         let sketches: Vec<&CMSObject> = match sketches_result {
             Ok(v) => v,
-            Err(_) => return Err(ValkeyError::WrongType)
+            Err(_) => return Err(ValkeyError::WrongType),
         };
 
         let sketches_with_weights: Vec<(&CMSObject, f64)> = sketches
@@ -300,6 +300,18 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
             })
             .collect();
 
-        return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
+        let merged_cms = CMSObject::merge(sketches_with_weights);
+
+        //TODO: Replication Args need done still
+        //TODO: Does this consume the others keys as well? 
+        let destination = ctx.open_key_writable(destination_key);
+        match destination.set_value(&CMS_TYPE, merged_cms) {
+            Ok(()) => {
+                //replicate_and_notify_events(ctx, filter_name, false, true, replicate_args);
+                VALKEY_OK
+            }
+            Err(_) => Err(ValkeyError::Str(utils::ERROR)),
+        }
+
     }
 }
