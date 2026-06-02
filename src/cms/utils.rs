@@ -124,8 +124,8 @@ impl CMSObject {
         todo!() //What would be the free effort for cms?
     }
 
-    pub fn merge() -> CMSObject {
-        todo!()
+    pub fn merge(&self, sketch_and_weights: Vec<(&CMSObject, f64)>) -> CMSObject {
+        CMSObject::new_by_dimension(2, 2).unwrap() //TODO: MOCKED, COME BACK
     }
 }
 

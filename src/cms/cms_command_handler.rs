@@ -277,7 +277,29 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
         println!("Weights: {:?}", weights);
 
-        //TODO:  Pull the CMSObjects from Redis
+        let source_key_handles: Vec<_> = source_keys
+            .iter()
+            .map(|key| ctx.open_key(key))
+            .collect();
+        let sketches_result: Result<Vec<&CMSObject>, ValkeyError> = source_key_handles
+            .iter()
+            .map(|key_handle| key_handle.get_value::<CMSObject>(&CMS_TYPE).and_then(|opt| opt.ok_or_else(|| ValkeyError::Str("ERR key does not exist"))))
+            .collect();
+
+        let sketches: Vec<&CMSObject> = match sketches_result {
+            Ok(v) => v,
+            Err(_) => return Err(ValkeyError::WrongType)
+        };
+
+        let sketches_with_weights: Vec<(&CMSObject, f64)> = sketches
+            .into_iter()
+            .enumerate()
+            .map(|(i, sketch)| {
+                let weight = weights.get(i).copied().unwrap_or(1.0);
+                (sketch, weight)
+            })
+            .collect();
+
         return ValkeyResult::Ok(ValkeyValue::Integer(3)); //TODO: Call into merge here instead
     }
 }
