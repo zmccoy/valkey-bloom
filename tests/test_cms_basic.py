@@ -32,7 +32,7 @@ class TestCMSBasic(ValkeyBloomTestCaseBase):
         assert client.execute_command('CMS.QUERY sketch1 item1')[0] >= 1
 
         #Check Info piece setup [width, depth, count]
-        assert client.execute_command('CMS.INFO sketch1') == [10, 5, 1]
+        assert client.execute_command('CMS.INFO sketch1') == [b'Width', 10, b'Depth', 5, b'Count', 1]
         
 
 
