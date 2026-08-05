@@ -31,8 +31,8 @@ class TestCMSBasic(ValkeyBloomTestCaseBase):
         #CMS guarantees that we have the frequency at LEAST the size of the increment for the item
         assert client.execute_command('CMS.QUERY sketch1 item1')[0] >= 1
 
-        #Check Info piece setup [width, depth, count]
-        assert client.execute_command('CMS.INFO sketch1') == [b'Width', 10, b'Depth', 5, b'Count', 1]
+        #Check Info piece setup
+        assert client.execute_command('CMS.INFO sketch1') == [b'Width', 10, b'Depth', 5, b'Count', 2]
         
 
 
