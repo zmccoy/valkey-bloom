@@ -50,7 +50,9 @@ class TestCMSCommand(ValkeyBloomTestCaseBase):
 
             ('CMS.QUERY', 'wrong number of arguments for \'CMS.QUERY\' command'),
             ('CMS.QUERY key', 'wrong number of arguments for \'CMS.QUERY\' command'),
-         
+
+            ('CMS.INFO', 'wrong number of arguments for \CMS.INFO\' command'),
+
         ]
 
         for test_case in basic_error_test_cases:

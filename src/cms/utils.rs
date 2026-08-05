@@ -38,9 +38,8 @@ impl CMSError {
 }
 
 pub struct CMSObject {
-    width: u64,
-    depth: u64,
-    total: u64,
+    pub width: u64,
+    pub depth: u64,
     cms: CMS,
 }
 
@@ -56,12 +55,7 @@ impl CMSObject {
         }
 
         let cms = CMS::new_by_dimensions(width as usize, depth as usize)?;
-        let obj = CMSObject {
-            width,
-            depth,
-            total: 0,
-            cms,
-        };
+        let obj = CMSObject { width, depth, cms };
 
         Ok(obj)
     }
@@ -83,7 +77,6 @@ impl CMSObject {
         let obj = CMSObject {
             width: cms.sketch.width() as u64,
             depth: cms.sketch.depth() as u64,
-            total: 0,
             cms,
         };
 
@@ -99,7 +92,7 @@ impl CMSObject {
     }
 
     pub fn total(&self) -> u64 {
-        self.total
+        self.cms.sketch.total_count()
     }
 
     pub fn increment_by(&mut self, item: &String, increment: u64) -> u64 {
