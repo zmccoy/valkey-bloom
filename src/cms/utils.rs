@@ -1,4 +1,4 @@
-use flowstats::CountMinSketch;
+use flowstats::{traits::Sketch, CountMinSketch};
 
 /// Client Errors
 pub const ERROR: &str = "ERROR";
@@ -12,11 +12,13 @@ pub const BAD_PROBABILITY: &str = "ERR bad probability";
 pub const PROBABILITY_RANGE: &str = "ERR probability rate should be between 0 and 1";
 pub const KEY_EXISTS: &str = "ERR Target key name already exists.";
 pub const BAD_INCREMENT: &str = "ERR bad increment";
+pub const MERGE_FAILURE: &str = "ERR width / depth is not equal across sketches";
 
 ///Keyspace Notification Events
 pub const INITBYPROB_EVENT: &str = "countminsketch.initbyprob";
 pub const INITBYDIM_EVENT: &str = "countminsketch.initbydim";
 pub const INCR_EVENT: &str = "countminsketch.incrby";
+pub const MERGE_EVENT: &str = "countminsketch.merge";
 
 #[derive(Debug, PartialEq)]
 pub enum CMSError {
@@ -24,6 +26,7 @@ pub enum CMSError {
     InvalidDepth,
     InvalidErrorRate,
     InvalidProbability,
+    MergeFailed,
 }
 
 impl CMSError {
@@ -33,6 +36,7 @@ impl CMSError {
             CMSError::InvalidDepth => BAD_DEPTH,
             CMSError::InvalidErrorRate => ERROR_RATE_RANGE,
             CMSError::InvalidProbability => PROBABILITY_RANGE,
+            CMSError::MergeFailed => MERGE_FAILURE,
         }
     }
 }
@@ -102,6 +106,24 @@ impl CMSObject {
 
     pub fn estimate(&self, item: &String) -> u64 {
         self.cms.estimate_item(item)
+    }
+
+    pub fn merge(sketches_and_weights: &[(&CMSObject, f64)]) -> Result<(), CMSError> {
+        let (head, tail) = sketches_and_weights
+            .split_first()
+            .ok_or(CMSError::MergeFailed)?;
+
+        let mut merged_sketch = head.0.cms.sketch.clone();
+
+        for (cms, _weight) in tail.iter() {
+            if merged_sketch.merge(&cms.cms.sketch).is_err() {
+                return Err(CMSError::MergeFailed);
+            }
+        }
+
+        //TODO:  This will need to be something that mutates the first head sketch.
+        
+        Ok(())
     }
 }
 

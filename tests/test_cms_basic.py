@@ -7,7 +7,7 @@ from valkeytestframework.conftest import resource_port_tracker
 
 class TestCMSBasic(ValkeyBloomTestCaseBase):
     """
-    Basic coverage for the ability to create count min sketch data structures, add, and query them.
+    Basic coverage for the ability to create count min sketch data structures, add, query, and merge them.
     """
 
     def test_basic_dim(self):
@@ -21,7 +21,7 @@ class TestCMSBasic(ValkeyBloomTestCaseBase):
         assert(module_loaded)
         # Validate that all the CMS.* commands are supported on the server.
         command_cmd_result = client.execute_command('COMMAND')
-        cms_cmds = ["CMS.INITBYDIM", "CMS.INITBYPROB", "CMS.INCRBY", "CMS.QUERY", "CMS.INFO"]
+        cms_cmds = ["CMS.INITBYDIM", "CMS.INITBYPROB", "CMS.INCRBY", "CMS.QUERY", "CMS.INFO", "CMS.MERGE"]
         assert all(item in command_cmd_result for item in cms_cmds)
         #Create CMS by Dimensions, add item, estimate the item, increment, estimate
         assert client.execute_command('CMS.INITBYDIM sketch1 10 5') == b'OK'
@@ -48,7 +48,7 @@ class TestCMSBasic(ValkeyBloomTestCaseBase):
         assert(module_loaded)
         # Validate that all the CMS.* commands are supported on the server.
         command_cmd_result = client.execute_command('COMMAND')
-        cms_cmds = ["CMS.INITBYDIM", "CMS.INITBYPROB", "CMS.INCRBY", "CMS.QUERY", "CMS.INFO"]
+        cms_cmds = ["CMS.INITBYDIM", "CMS.INITBYPROB", "CMS.INCRBY", "CMS.QUERY", "CMS.INFO", "CMS.MERGE"]
         assert all(item in command_cmd_result for item in cms_cmds)
         #Create CMS by Dimensions, add item, estimate the item, increment, estimate
         assert client.execute_command('CMS.INITBYPROB sketch1 0.001 0.01') == b'OK'
@@ -57,6 +57,26 @@ class TestCMSBasic(ValkeyBloomTestCaseBase):
 
         #CMS guarantees that we have the frequency at LEAST the size of the increment for the item
         assert client.execute_command('CMS.QUERY sketch1 item1')[0] >= 1
+
+    def test_merge(self):
+        client = self.server.get_new_client()
+        module_loaded = False
+        module_list_data = client.execute_command('MODULE LIST')      
+        for module in module_list_data:
+            if (module[b'name'] == b'bf'):
+                module_loaded = True
+                break
+        assert(module_loaded)
+        #Create the destination and sketches to be merged into the destination key
+        # assert client.execute_command('CMS.INITBYDIM dest 10 5') == b'OK'
+        assert client.execute_command('CMS.INITBYDIM s1 10 5') == b'OK'
+        assert client.execute_command('CMS.INITBYDIM s2 10 5') == b'OK'
+        assert client.execute_command('CMS.INCRBY s1 a 1 b 2') == [1, 2]
+        assert client.execute_command('CMS.INCRBY s2 a 1 b 3') == [1, 2]
+        assert client.execute_command('CMS.MERGE dest 2 s1 s2') == b'OK'
+        assert client.execute_command('CMS.QUERY dest a') == [2]
+        assert client.execute_coomand('CMS.QUERY dest b') == [5]
+
 
     def test_module_data_type(self):
         # Validate the name of the Module data type.
