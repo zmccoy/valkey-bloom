@@ -116,11 +116,15 @@ impl CMSObject {
         let mut merged_sketch = head.0.cms.sketch.clone();
 
         for (cms, _weight) in tail.iter() {
-            merged_sketch.merge(&cms.cms.sketch).map_err(|_| CMSError::MergeFailed)?;
+            merged_sketch
+                .merge(&cms.cms.sketch)
+                .map_err(|_| CMSError::MergeFailed)?;
         }
 
-        self.cms = CMS { sketch: merged_sketch };
-        
+        self.cms = CMS {
+            sketch: merged_sketch,
+        };
+
         Ok(())
     }
 }
@@ -149,5 +153,4 @@ impl CMS {
     pub fn estimate_item(&self, item: &String) -> u64 {
         self.sketch.estimate(item.as_bytes())
     }
-
 }
