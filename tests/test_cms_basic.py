@@ -68,11 +68,11 @@ class TestCMSBasic(ValkeyBloomTestCaseBase):
                 break
         assert(module_loaded)
         #Create the destination and sketches to be merged into the destination key
-        # assert client.execute_command('CMS.INITBYDIM dest 10 5') == b'OK'
+        assert client.execute_command('CMS.INITBYDIM dest 10 5') == b'OK'
         assert client.execute_command('CMS.INITBYDIM s1 10 5') == b'OK'
         assert client.execute_command('CMS.INITBYDIM s2 10 5') == b'OK'
         assert client.execute_command('CMS.INCRBY s1 a 1 b 2') == [1, 2]
-        assert client.execute_command('CMS.INCRBY s2 a 1 b 3') == [1, 2]
+        assert client.execute_command('CMS.INCRBY s2 a 1 b 3') == [1, 3]
         assert client.execute_command('CMS.MERGE dest 2 s1 s2') == b'OK'
         assert client.execute_command('CMS.QUERY dest a') == [2]
         assert client.execute_coomand('CMS.QUERY dest b') == [5]
