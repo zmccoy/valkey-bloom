@@ -290,8 +290,7 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     //This must already be initialized.
     let destination_key = &args[1];
 
-    let number_of_keys = &args[2].to_string_lossy().clone(); //Come back to this to clean up the clone
-    let number_of_keys_value = number_of_keys.parse::<usize>()?;
+    let number_of_keys_value = args[2].to_string_lossy().parse::<usize>()?;
 
     //Indexes 3 -> 3 + N-1 are keys to merge
     let sketch_end_index = 3 + number_of_keys_value - 1;
@@ -304,8 +303,6 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     } else {
         //Make sure we have at least WEIGHT weight left
         let weight_args_left = args_count - sketch_end_index - 1;
-        println!("Weight args left: {:?}", weight_args_left);
-
         if weight_args_left < 2 {
             return Err(ValkeyError::WrongArity);
         }
@@ -327,9 +324,6 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
                     .map_err(|_| ValkeyError::Str("ERR invalid weight value"))
             })
             .collect::<Result<Vec<_>, _>>()?;
-
-        //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
-        println!("Weights: {:?}", weights);
         weights
     };
 
