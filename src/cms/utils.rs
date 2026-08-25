@@ -108,7 +108,7 @@ impl CMSObject {
         self.cms.estimate_item(item)
     }
 
-    pub fn merge(sketches_and_weights: &[(&CMSObject, f64)]) -> Result<(), CMSError> {
+    pub fn merge(&mut self, sketches_and_weights: &[(&CMSObject, f64)]) -> Result<(), CMSError> {
         let (head, tail) = sketches_and_weights
             .split_first()
             .ok_or(CMSError::MergeFailed)?;
@@ -116,12 +116,10 @@ impl CMSObject {
         let mut merged_sketch = head.0.cms.sketch.clone();
 
         for (cms, _weight) in tail.iter() {
-            if merged_sketch.merge(&cms.cms.sketch).is_err() {
-                return Err(CMSError::MergeFailed);
-            }
+            merged_sketch.merge(&cms.cms.sketch).map_err(|_| CMSError::MergeFailed)?;
         }
 
-        //TODO:  This will need to be something that mutates the first head sketch.
+        self.cms = CMS { sketch: merged_sketch };
         
         Ok(())
     }
@@ -151,4 +149,5 @@ impl CMS {
     pub fn estimate_item(&self, item: &String) -> u64 {
         self.sketch.estimate(item.as_bytes())
     }
+
 }

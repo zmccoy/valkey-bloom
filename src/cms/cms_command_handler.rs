@@ -1,5 +1,5 @@
 use valkey_module::{
-    Context, NotifyEvent, ValkeyError, ValkeyResult, ValkeyString, ValkeyValue, VALKEY_OK,
+    Context, NotifyEvent, ValkeyError, ValkeyResult, key::ValkeyKey, ValkeyString, ValkeyValue, VALKEY_OK,
 };
 
 use crate::cms::data_type::CMS_TYPE;
@@ -296,21 +296,6 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
     //Up to non inclusive grab 3 up to sketch_end_index
     let source_keys: Vec<&ValkeyString> = args[3..=sketch_end_index].iter().collect();
 
-    //Make sure the DESTINATION and SOURCE KEYS are all the same width / depth otherwise error.  This also allows us to merge without fear of mutation issues / failing because of width/depth.
-    //TODO: CHECK HERE
-    
-    
-    //THIS SECTION CAN BE REMOVED BEFORE PR
-    let p: Vec<String> = args.clone().iter().map(|a| a.to_string_lossy()).collect();
-    println!("Incoming args: {:?}", p);
-    let p2: Vec<String> = source_keys.iter().map(|a| a.to_string_lossy()).collect();
-    println!("Source Keys: {:?}", p2);
-    println!(
-        "At Sketch_End is {:?}",
-        args[sketch_end_index].to_string_lossy()
-    );
-    //END SECTION
-
     //Then Parse the optional WEIGHTS section of the command.  WEIGHTS is at sketch_end + 1
     let passed_in_weights = if sketch_end_index + 1 == args_count {
         Vec::new()
@@ -332,22 +317,14 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         let weights_start = weights_keyword_index + 1;
         let weights_args = args[weights_start..].iter();
 
-        //It is valid to have less than the number of sketches for the weights here
-        let mut weights: Vec<f64> = Vec::new();
-        for weight_arg in weights_args {
-            let weight = match weight_arg.to_string_lossy().parse::<f64>() {
-                Ok(w) => w,
-                Err(_) => return Err(ValkeyError::Str("ERR invalid weight value")),
-            };
-            weights.push(weight);
-        }
+        let weights: Vec<f64> = weights_args.map(|weight| weight.to_string_lossy().parse::<f64>().map_err(|_| ValkeyError::Str("ERR invalid weight value"))).collect::<Result<Vec<_>, _>>()?;
+
         //The spec has 1 weight being valid and then we'd fill in with 1.0 for the rest where weights size does not need to equal the number of keys.
         println!("Weights: {:?}", weights);
         weights
     };
 
-    println!("Passed in weights {:?}", passed_in_weights);
-    let source_key_handles: Vec<_> = source_keys.iter().map(|key| ctx.open_key(key)).collect();
+    let source_key_handles: Vec<ValkeyKey> = source_keys.iter().map(|key| ctx.open_key(key)).collect();
     let sketches_result: Result<Vec<&CMSObject>, ValkeyError> = source_key_handles
         .iter()
         .map(|key_handle| {
@@ -358,7 +335,7 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         .collect();
     
     let sketches: Vec<&CMSObject> = sketches_result?;
-    let destination_sketch = ctx.open_key(destination_key).get_value::<CMSObject>(&CMS_TYPE).and_then(|opt| opt.ok_or_else(|| ValkeyError::Str("ERR key does not exist")))?;
+    let destination_sketch = ctx.open_key_writable(destination_key).get_value::<CMSObject>(&CMS_TYPE).and_then(|opt| opt.ok_or_else(|| ValkeyError::Str("ERR key does not exist")))?;
     let width = destination_sketch.width();
     let depth = destination_sketch.depth();
     
@@ -366,7 +343,6 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         return Err(ValkeyError::Str("ERR destination key is not of the same width and/or depth"))
     }
 
-    println!("Got to sketches before doing weights with it");
     let sketches_with_weights: Vec<(&CMSObject, f64)> = sketches
         .into_iter()
         .enumerate()
@@ -375,10 +351,10 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
             (sketch, weight)
         })
         .collect();
-    
-    let merged_cms = CMSObject::merge(&sketches_with_weights).map_err(|_| ValkeyError::Str("Merge failed because of sizing differences"))?;
 
-    println!("Got to after opening the key writable");
+    //Mutates the destination_sketch's internal CMS to be the merge of the sketches_with_weights
+    //Impl note:  We do not handle the weights yet in the called function, as the source needs to change.
+    destination_sketch.merge(&sketches_with_weights).map_err(|_| ValkeyError::Str("Merge failed because of sizing differences"))?;
 
     replicate_and_notify_events(ctx, destination_key, Operation::Merge);
     VALKEY_OK
