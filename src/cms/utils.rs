@@ -108,7 +108,18 @@ impl CMSObject {
         self.cms.estimate_item(item)
     }
 
+    //Could merge the size check into here
     pub fn merge(&mut self, sketches_and_weights: &[(&CMSObject, f64)]) -> Result<(), CMSError> {
+
+    //Pre-check this so dest is the same size as the others.
+    if sketches_and_weights
+        .iter()
+        .any(|sketch| sketch.0.width() != self.width() || sketch.0.depth != self.depth())
+    {
+        return Err(CMSError::MergeFailed)
+    }
+
+        
         let (head, tail) = sketches_and_weights
             .split_first()
             .ok_or(CMSError::MergeFailed)?;

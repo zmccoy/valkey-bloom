@@ -343,17 +343,6 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         .open_key_writable(destination_key)
         .get_value::<CMSObject>(&CMS_TYPE)
         .and_then(|opt| opt.ok_or_else(|| ValkeyError::Str("ERR key does not exist")))?;
-    let width = destination_sketch.width();
-    let depth = destination_sketch.depth();
-
-    if sketches
-        .iter()
-        .any(|sketch| sketch.width != width || sketch.depth != depth)
-    {
-        return Err(ValkeyError::Str(
-            "ERR destination key is not of the same width and/or depth",
-        ));
-    }
 
     let sketches_with_weights: Vec<(&CMSObject, f64)> = sketches
         .into_iter()
@@ -365,10 +354,10 @@ pub fn cms_merge(ctx: &Context, args: Vec<ValkeyString>) -> ValkeyResult {
         .collect();
 
     //Mutates the destination_sketch's internal CMS to be the merge of the sketches_with_weights
-    //Impl note:  We do not handle the weights yet in the called function, as the source needs to change.
+    //Impl note:  We do not handle the weights yet in the called function, as the lib-source needs to change.
     destination_sketch
         .merge(&sketches_with_weights)
-        .map_err(|_| ValkeyError::Str("Merge failed because of sizing differences"))?;
+        .map_err(|_| ValkeyError::Str("ERR destination key is not of the same width and/or depth"))?;
 
     replicate_and_notify_events(ctx, destination_key, Operation::Merge);
     VALKEY_OK
