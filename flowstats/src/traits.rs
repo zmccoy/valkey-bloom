@@ -132,7 +132,7 @@ pub trait Sketch: Clone + Debug {
     /// Merge another sketch into this one
     ///
     /// Returns an error if sketches are incompatible
-    fn merge(&mut self, other: &Self) -> Result<(), MergeError>;
+    fn merge(&mut self, other: &Self, weight: u64) -> Result<(), MergeError>;
 
     /// Reset sketch to empty state
     fn clear(&mut self);
@@ -140,13 +140,6 @@ pub trait Sketch: Clone + Debug {
     /// Memory usage in bytes
     fn size_bytes(&self) -> usize;
 
-    /// Number of items processed
-    fn count(&self) -> u64;
-
-    /// Check if sketch is empty
-    fn is_empty(&self) -> bool {
-        self.count() == 0
-    }
 }
 
 /// Cardinality (distinct count) estimation sketches

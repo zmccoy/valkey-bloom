@@ -7,6 +7,7 @@
 //! The Count-Min Sketch is a probabilistic data structure for estimating
 //! the frequency of elements in a data stream.
 
+use crate::frequency::bits::Bits;
 use crate::math;
 use crate::traits::{FrequencySketch, MergeError, Sketch};
 use xxhash_rust::xxh3::xxh3_64_with_seed;
@@ -54,8 +55,6 @@ pub struct CountMinSketch {
     table: Vec<Vec<u64>>,
     /// Total count of all items
     total_count: u64,
-    /// Number of updates
-    num_updates: u64,
     /// Seeds for hash functions
     seeds: Vec<u64>,
 }
@@ -93,7 +92,7 @@ impl CountMinSketch {
         assert!(width > 0, "width must be positive");
         assert!(depth > 0, "depth must be positive");
 
-        // Generate random seeds for hash functions
+        // Generate seeds for hash functions.  This is deterministic per position even for recreation. 
         let seeds: Vec<u64> = (0..depth)
             .map(|i| (i as u64).wrapping_mul(0x9e3779b97f4a7c15))
             .collect();
@@ -103,7 +102,6 @@ impl CountMinSketch {
             depth,
             table: vec![vec![0u64; width]; depth],
             total_count: 0,
-            num_updates: 0,
             seeds,
         }
     }
@@ -125,7 +123,6 @@ impl CountMinSketch {
 
     /// Add count to an item
     pub fn add(&mut self, item: &[u8], count: u64) {
-        self.num_updates += 1;
         self.total_count += count;
 
         for (row, &seed) in self.seeds.iter().enumerate() {
@@ -135,12 +132,21 @@ impl CountMinSketch {
         }
     }
 
+    //Multiplies the table using saturating_mul by the weight passed in.
+    pub fn weight(&mut self, weight: u64) {
+        for row in 0..self.depth {
+            for column in 0..self.width {
+                let v = self.table[row][column];
+                self.table[row][column] = v.saturating_mul(weight);
+            }
+        }
+    }
+
     /// Add count using conservative update
     ///
     /// Conservative update improves accuracy by only incrementing counters
     /// up to the new estimated value. This reduces over-counting.
     pub fn add_conservative(&mut self, item: &[u8], count: u64) {
-        self.num_updates += 1;
         self.total_count += count;
 
         // First pass: find current estimate (minimum)
@@ -199,7 +205,104 @@ impl CountMinSketch {
         let epsilon = core::f64::consts::E / self.width as f64;
         (epsilon * self.total_count as f64) as u64
     }
-}
+
+
+    /// Serialize the sketch to little-endian bytes using the Bits format.
+    ///
+    /// Layout:
+    /// - Fixed header (25 bytes): version, length, depth, width, total_count
+    /// - Seeds: depth * 8 bytes (u64 LE each)
+    /// - Table: depth * width * 8 bytes (u64 LE each, row-major)
+    pub fn into_bytes(self) -> Vec<u8> {
+        let table_size = self.depth * self.width * 8;
+
+        let mut bits = Bits::new(self.depth, table_size);
+
+        // Set header fields
+        let header = bits.header_mut();
+        Bits::set_width(header, self.width as u32);
+        Bits::set_total_count(header, self.total_count);
+
+        // Write seeds
+        let seeds_data = bits.seeds_mut();
+        for (i, &seed) in self.seeds.iter().enumerate() {
+            let offset = i * 8;
+            seeds_data[offset..offset + 8].copy_from_slice(&seed.to_le_bytes());
+        }
+
+        // Write table (row-major)
+        let table_data = bits.table_mut();
+        let mut offset = 0;
+        for row in &self.table {
+            for &counter in row {
+                table_data[offset..offset + 8].copy_from_slice(&counter.to_le_bytes());
+                offset += 8;
+            }
+        }
+
+        bits.into_bytes()
+    }
+
+    /// Deserialize a sketch from little-endian bytes (takes ownership)
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Self, &'static str> {
+        let bits = Bits::from_bytes(bytes)?;
+        Self::from_bits(&bits)
+    }
+
+    /// Deserialize a sketch from little-endian bytes (borrows)
+    pub fn from_existing(bytes: &[u8]) -> Result<Self, &'static str> {
+        let bits = Bits::from_bytes(bytes.to_vec())?;
+        Self::from_bits(&bits)
+    }
+
+    fn from_bits(bits: &Bits) -> Result<Self, &'static str> {
+        let header = bits.header();
+        let depth = Bits::get_depth(header) as usize;
+        let width = Bits::get_width(header) as usize;
+        let total_count = Bits::get_total_count(header);
+
+        if width == 0 || depth == 0 {
+            return Err("width and depth must be positive");
+        }
+
+        // Read seeds
+        let seeds_data = bits.seeds();
+        let mut seeds = Vec::with_capacity(depth);
+        for i in 0..depth {
+            let offset = i * 8;
+            let seed = u64::from_le_bytes(seeds_data[offset..offset + 8].try_into().unwrap());
+            seeds.push(seed);
+        }
+
+        // Read table
+        let table_data = bits.table();
+        let mut table = Vec::with_capacity(depth);
+        let mut offset = 0;
+        for _ in 0..depth {
+            let mut row = Vec::with_capacity(width);
+            for _ in 0..width {
+                let counter = u64::from_le_bytes(table_data[offset..offset + 8].try_into().unwrap());
+                row.push(counter);
+                offset += 8;
+            }
+            table.push(row);
+        }
+
+        Ok(Self {
+            width,
+            depth,
+            table,
+            total_count,
+            seeds,
+        })
+    }
+
+    //Is this still needed with the deterministic creation above?
+    pub fn new_by_dimension_with_seed(width: usize, depth: usize, seed: [u8; 32]) -> Self {
+        todo!()
+    }
+
+ }
 
 impl Sketch for CountMinSketch {
     type Item = [u8];
@@ -208,7 +311,7 @@ impl Sketch for CountMinSketch {
         self.add(item, 1);
     }
 
-    fn merge(&mut self, other: &Self) -> Result<(), MergeError> {
+    fn merge(&mut self, other: &Self, weight: u64) -> Result<(), MergeError> {
         if self.width != other.width || self.depth != other.depth {
             return Err(MergeError::IncompatibleConfig {
                 expected: format!("{}x{}", self.width, self.depth),
@@ -218,12 +321,11 @@ impl Sketch for CountMinSketch {
 
         for row in 0..self.depth {
             for col in 0..self.width {
-                self.table[row][col] = self.table[row][col].saturating_add(other.table[row][col]);
+                self.table[row][col] = self.table[row][col].saturating_add(other.table[row][col].saturating_mul(weight));
             }
         }
 
         self.total_count += other.total_count;
-        self.num_updates += other.num_updates;
 
         Ok(())
     }
@@ -233,7 +335,6 @@ impl Sketch for CountMinSketch {
             row.fill(0);
         }
         self.total_count = 0;
-        self.num_updates = 0;
     }
 
     fn size_bytes(&self) -> usize {
@@ -242,33 +343,12 @@ impl Sketch for CountMinSketch {
             + self.seeds.len() * core::mem::size_of::<u64>()
     }
 
-    fn count(&self) -> u64 {
-        self.num_updates
-    }
 }
 
 
 impl FrequencySketch for CountMinSketch {
     fn estimate_frequency(&self, item: &[u8]) -> u64 {
         self.estimate(item)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl serde::Serialize for CountMinSketch {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut state = serializer.serialize_struct("CountMinSketch", 6)?;
-        state.serialize_field("width", &self.width)?;
-        state.serialize_field("depth", &self.depth)?;
-        state.serialize_field("table", &self.table)?;
-        state.serialize_field("total_count", &self.total_count)?;
-        state.serialize_field("num_updates", &self.num_updates)?;
-        state.serialize_field("seeds", &self.seeds)?;
-        state.end()
     }
 }
 
@@ -329,7 +409,7 @@ mod tests {
         cms1.add(b"apple", 5);
         cms2.add(b"banana", 3);
 
-        cms1.merge(&cms2).unwrap();
+        cms1.merge(&cms2, 1).unwrap();
 
         assert!(cms1.estimate(b"apple") >= 5);
         assert!(cms1.estimate(b"banana") >= 3);
@@ -341,7 +421,7 @@ mod tests {
         let mut cms1 = CountMinSketch::with_dimensions(1000, 5);
         let cms2 = CountMinSketch::with_dimensions(2000, 5);
 
-        assert!(cms1.merge(&cms2).is_err());
+        assert!(cms1.merge(&cms2, 1).is_err());
     }
 
     #[test]
@@ -406,5 +486,43 @@ mod tests {
         // = 10*3 + 5*2 = 40
         let ip = cms1.inner_product(&cms2).unwrap();
         assert!(ip >= 40, "inner product {} < 40", ip);
+    }
+
+    #[test]
+    fn test_bytes_round_trip() {
+        let mut cms = CountMinSketch::with_dimensions(100, 4);
+        cms.add(b"apple", 5);
+        cms.add(b"banana", 3);
+        cms.add(b"cherry", 10);
+
+        let original_width = cms.width();
+        let original_depth = cms.depth();
+        let original_total_count = cms.total_count();
+        let apple_estimate = cms.estimate(b"apple");
+        let banana_estimate = cms.estimate(b"banana");
+        let cherry_estimate = cms.estimate(b"cherry");
+
+        let bytes = cms.into_bytes();
+        let restored = CountMinSketch::from_bytes(bytes).unwrap();
+
+        assert_eq!(restored.width(), original_width);
+        assert_eq!(restored.depth(), original_depth);
+        assert_eq!(restored.total_count(), original_total_count);
+        assert_eq!(restored.estimate(b"apple"), apple_estimate);
+        assert_eq!(restored.estimate(b"banana"), banana_estimate);
+        assert_eq!(restored.estimate(b"cherry"), cherry_estimate);
+    }
+
+    #[test]
+    fn test_from_existing() {
+        let mut cms = CountMinSketch::with_dimensions(50, 3);
+        cms.add(b"test", 42);
+
+        let bytes = cms.into_bytes();
+        let restored = CountMinSketch::from_existing(&bytes).unwrap();
+
+        assert_eq!(restored.width(), 50);
+        assert_eq!(restored.depth(), 3);
+        assert_eq!(restored.estimate(b"test"), 42);
     }
 }

@@ -27,5 +27,6 @@
 //! ```
 
 mod count_min;
+mod bits;
 
 pub use count_min::CountMinSketch;
