@@ -133,25 +133,31 @@ class TestCMSReplication(ReplicationTestCase):
         # Reset the stats for the invalid write commands testing below
         self.reset_state()
 
-        # Write commands with errors are not replicated. (prefix, command)
-        # Could we add a couple more cases here where we get past args parsing. Maybe like key exists,
-        # incyby on missing key, incrby on something with right number of args but bad arg halfway through
+        # Write commands with errors are not replicated. (prefix, setup, command, numberOfCalls)
         invalid_write_cmds = [
-            ('CMS.INITBYDIM', 'CMS.INITBYDIM key 10 5 5'),
-            ('CMS.INITBYPROB', 'CMS.INITBYPROB key 0 0.1'),
-            ('CMS.INCRBY', 'CMS.INCRBY key item1 1 1'),
+            ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1), # Bad parsing too many arguments
+            ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 1), # Bad parsing 0 is not a valid value
+            ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1 1', 1), # Bad parsing too many arguments
+            ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1', 2), # Key does not exist
+            ('CMS.INCRBY', 'CMS.INITBYDIM key 10 5', 'CMS.INCRBY key item1 a', 3), # Key exists, Bad value of increment 
         ]
         for test_case in invalid_write_cmds:
             prefix = test_case[0]
-            cmd = test_case[1]
+            setup = test_case[1]
+            cmd = test_case[2]
+            expected_calls = test_case[3]
+
+            if setup != '':
+                self.client.execute_command(setup)
+            
             try:
                 self.client.execute_command(cmd)
                 assert False
             except ResponseError as e:
                 pass
             primary_cmd_stats = self.client.info("Commandstats")['cmdstat_' + prefix]
-            assert primary_cmd_stats["calls"] == 1
-            assert primary_cmd_stats["failed_calls"] == 1
+            assert primary_cmd_stats["calls"] == expected_calls
+            assert primary_cmd_stats["failed_calls"] == expected_calls
             assert ('cmdstat_' + prefix) not in self.replicas[0].client.info("Commandstats")
 
 
