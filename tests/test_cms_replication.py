@@ -89,23 +89,30 @@ class TestCMSReplication(ReplicationTestCase):
 
             self.reset_state()
 
-        #Merge commands setup and test
-        #Note:  This is duplicates of above without trying to jam the setup into the existing portion yet.
+        # Merge commands setup and test
         cms_merge_setup = [
-            'CMS.INITBYDIM key 10 5',
+            'CMS.INITBYDIM key 10 5', # Needs to exist for Merge, empty
             'CMS.INITBYDIM key2 10 5',
+            'CMS.INCRBY key2 item1 1',
             'CMS.INITBYDIM key3 10 5',
+            'CMS.INCRBY key3 item1 1',
         ]
 
         for setup in cms_merge_setup:
             self.client.execute_command(setup)
 
         self.client.execute_command('CMS.MERGE key 2 key2 key3')
+
+        # These assertions only prove that the INITBYDIM created the key. 
         assert self.client.execute_command('EXISTS key') == 1
         self.waitForReplicaToSyncUp(self.replicas[0])
         assert self.replicas[0].client.execute_command('EXISTS key') == 1
+        
         self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
-            
+        
+        #CMS guarantees that we don't underestimate frequency so it should be the addition of what is in item1 at a minimum 1+1
+        self.replicas[0].client.execute_command('CMS.QUERY key item1') >= 2
+        
         self.reset_state()
         
         # Re-setup for read commands
@@ -136,7 +143,7 @@ class TestCMSReplication(ReplicationTestCase):
         # Write commands with errors are not replicated. (prefix, setup, command, number_of_calls, failed_calls)
         invalid_write_cmds = [
             ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1, 1), # Bad parsing too many arguments
-            ('CMS.INITBYDIM', 'CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM key 10 5', 3, 2) # Fail to create as the key already exists
+            ('CMS.INITBYDIM', 'CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM key 10 5', 3, 2), # Fail to create as the key already exists
             ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 1), # Bad parsing 0 is not a valid value
             ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1 1', 1), # Bad parsing too many arguments
             ('CMS.INCRBY', '', 'CMS.INCRBY noExist item1 1', 2), # Key does not exist
