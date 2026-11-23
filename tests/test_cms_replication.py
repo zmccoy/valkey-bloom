@@ -143,7 +143,7 @@ class TestCMSReplication(ReplicationTestCase):
         # Write commands with errors are not replicated. Shape: (prefix, setup, command, number_of_calls, failed_calls)
         invalid_write_cmds = [
             ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1, 1), # Bad parsing too many arguments
-            ('CMS.INITBYDIM', 'CMS.INITBYPROB key 0.001 0.01', 'CMS.INITBYDIM key 10 5', 1, 1), # Fail to create as the key already exists.
+            ('CMS.INITBYDIM', 'CMS.INITBYPROB key 0.001 0.01', 'CMS.INITBYDIM key 10 5', 2, 1), # Fail to create as the key already exists.
             ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 2, 1), # Bad parsing 0 is not a valid value
             ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1 1', 1, 1), # Bad parsing too many arguments
             ('CMS.INCRBY', '', 'CMS.INCRBY noExist item1 1', 2, 2), # Key does not exist
