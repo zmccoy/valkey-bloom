@@ -107,11 +107,11 @@ class TestCMSReplication(ReplicationTestCase):
         assert self.client.execute_command('EXISTS key') == 1
         self.waitForReplicaToSyncUp(self.replicas[0])
         assert self.replicas[0].client.execute_command('EXISTS key') == 1
-        
+
         self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
         
         #CMS guarantees that we don't underestimate frequency so it should be the addition of what is in item1 at a minimum 1+1
-        self.replicas[0].client.execute_command('CMS.QUERY key item1') >= 2
+        self.replicas[0].client.execute_command('CMS.QUERY key item1') >= [2]
         
         self.reset_state()
         
