@@ -55,11 +55,11 @@ class TestCMSReplication(ReplicationTestCase):
             self.setup_replication(num_replicas=1)
 
         # Test replication for write commands.
-        # Note Merge is missing here for write commands
         cms_write_cmds = [
             ('CMS.INITBYDIM', 'CMS.INITBYDIM key 10 5', 'CMS.INCRBY key item1 1', 1),
-            ('CMS.INITBYPROB', 'CMS.INITBYPROB key  0.001 0.01', 'CMS.INCRBY key item1 1', 1),
+            ('CMS.INITBYPROB', 'CMS.INITBYPROB key 0.001 0.01', 'CMS.INCRBY key item1 1', 1),
         ]
+        
         for test_case in cms_write_cmds:
             prefix = test_case[0]
             create_cmd = test_case[1]
@@ -70,9 +70,9 @@ class TestCMSReplication(ReplicationTestCase):
             assert self.replicas[0].client.execute_command('EXISTS key') == 1
             self.validate_cmd_stats(prefix, prefix, 1, 1)
 
-            # New item added to an existing bloom is replicated.
+            # New item added to an existing cms is replicated.
             item_add_cmd = test_case[2]
-            expected_calls = test_case[3]
+            expected_calls = test_case[3] #NOTE: Missing test using this
             self.client.execute_command(item_add_cmd)
             assert self.client.execute_command('CMS.QUERY key item1') == [1]
             self.waitForReplicaToSyncUp(self.replicas[0])
@@ -86,6 +86,30 @@ class TestCMSReplication(ReplicationTestCase):
             self.client.execute_command('CONFIG RESETSTAT')
             self.replicas[0].client.execute_command('CONFIG RESETSTAT')
 
+
+        #Merge commands setup and test
+        #Note:  This is duplicates of above without trying to jam the setup into the existing portion yet.
+        cms_merge_setup = [
+            'CMS.INITBYDIM key 10 5',
+            'CMS.INITBYDIM key2 10 5',
+            'CMS.INITBYDIM key3 10 5',
+        ]
+
+        for setup in cms_merge_setup:
+            self.client.execute_command(setup)
+
+        self.client.execute_command('CMS.MERGE key 2 key2 key3')
+        assert self.client.execute_command('EXISTS key') == 1
+        self.waitForReplicaToSyncUp(self.replicas[0])
+        assert self.replicas[0].client.execute_command('EXISTS key') == 1
+        self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
+            
+        self.client.execute_command('FLUSHALL')
+        self.waitForReplicaToSyncUp(self.replicas[0])
+        self.client.execute_command('CONFIG RESETSTAT')
+        self.replicas[0].client.execute_command('CONFIG RESETSTAT')
+
+        
         # Re-setup for read commands
         self.client.execute_command('CMS.INITBYDIM key 10 5')
         self.client.execute_command('CMS.INCRBY key item1 1')
