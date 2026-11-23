@@ -87,7 +87,7 @@ class TestCMSReplication(ReplicationTestCase):
             # cmd debug digest
             # TO BE IMPLEMENTED ONCE DIGEST IS IMPLEMENTED
 
-        self.reset_state()
+            self.reset_state()
 
         #Merge commands setup and test
         #Note:  This is duplicates of above without trying to jam the setup into the existing portion yet.
@@ -134,6 +134,8 @@ class TestCMSReplication(ReplicationTestCase):
         self.reset_state()
 
         # Write commands with errors are not replicated. (prefix, command)
+        # Could we add a couple more cases here where we get past args parsing. Maybe like key exists,
+        # incyby on missing key, incrby on something with right number of args but bad arg halfway through
         invalid_write_cmds = [
             ('CMS.INITBYDIM', 'CMS.INITBYDIM key 10 5 5'),
             ('CMS.INITBYPROB', 'CMS.INITBYPROB key 0 0.1'),
