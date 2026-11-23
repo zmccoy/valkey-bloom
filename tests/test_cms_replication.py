@@ -88,6 +88,7 @@ class TestCMSReplication(ReplicationTestCase):
             # TO BE IMPLEMENTED ONCE DIGEST IS IMPLEMENTED
 
             self.reset_state()
+        
 
         # Merge commands setup and test
         cms_merge_setup = [
@@ -109,10 +110,7 @@ class TestCMSReplication(ReplicationTestCase):
         assert self.replicas[0].client.execute_command('EXISTS key') == 1
 
         self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
-        
-        #CMS guarantees that we don't underestimate frequency so it should be the addition of what is in item1 at a minimum 1+1
-        self.replicas[0].client.execute_command('CMS.QUERY key item1') >= [2]
-        
+                
         self.reset_state()
         
         # Re-setup for read commands
