@@ -36,7 +36,6 @@ class TestCMSReplication(ReplicationTestCase):
             self.server, self.client = self.create_server(testdir = self.testdir,  server_path=server_path, args=self.args)
 
 
-            
     def validate_cmd_stats(self, primary_cmd, replica_cmd, expected_primary_calls, expected_replica_calls):
         """
             Helper fn to validate cmd count on primary & replica.
@@ -46,6 +45,13 @@ class TestCMSReplication(ReplicationTestCase):
         replica_cmd_stats = self.replicas[0].client.info("Commandstats")['cmdstat_' + replica_cmd]
         assert replica_cmd_stats["calls"] == expected_replica_calls
 
+        
+    def reset_state(self):
+        self.client.execute_command('FLUSHALL')
+        self.waitForReplicaToSyncUp(self.replicas[0])
+        self.client.execute_command('CONFIG RESETSTAT')
+        self.replicas[0].client.execute_command('CONFIG RESETSTAT')
+        
 
     def test_replication_behavior(self):
         use_external = os.environ.get("VALKEY_EXTERNAL_SERVER", "false").lower() == "true"
@@ -81,11 +87,7 @@ class TestCMSReplication(ReplicationTestCase):
             # cmd debug digest
             # TO BE IMPLEMENTED ONCE DIGEST IS IMPLEMENTED
 
-            self.client.execute_command('FLUSHALL')
-            self.waitForReplicaToSyncUp(self.replicas[0])
-            self.client.execute_command('CONFIG RESETSTAT')
-            self.replicas[0].client.execute_command('CONFIG RESETSTAT')
-
+        self.reset_state()
 
         #Merge commands setup and test
         #Note:  This is duplicates of above without trying to jam the setup into the existing portion yet.
@@ -104,11 +106,7 @@ class TestCMSReplication(ReplicationTestCase):
         assert self.replicas[0].client.execute_command('EXISTS key') == 1
         self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
             
-        self.client.execute_command('FLUSHALL')
-        self.waitForReplicaToSyncUp(self.replicas[0])
-        self.client.execute_command('CONFIG RESETSTAT')
-        self.replicas[0].client.execute_command('CONFIG RESETSTAT')
-
+        self.reset_state()
         
         # Re-setup for read commands
         self.client.execute_command('CMS.INITBYDIM key 10 5')
@@ -133,11 +131,7 @@ class TestCMSReplication(ReplicationTestCase):
             assert ('cmdstat_' + prefix) not in self.replicas[0].client.info("Commandstats")
 
         # Reset the stats for the invalid write commands testing below
-        self.client.execute_command('FLUSHALL')
-        self.waitForReplicaToSyncUp(self.replicas[0])
-        self.client.execute_command('CONFIG RESETSTAT')
-        self.replicas[0].client.execute_command('CONFIG RESETSTAT')
-
+        self.reset_state()
 
         # Write commands with errors are not replicated. (prefix, command)
         invalid_write_cmds = [
