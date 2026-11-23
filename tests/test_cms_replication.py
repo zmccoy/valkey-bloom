@@ -155,9 +155,17 @@ class TestCMSReplication(ReplicationTestCase):
             expected_calls = test_case[3]
             failed_calls = test_case[4]
 
+            # Earlier cases may leave `key` behind; remove it so each setup starts clean.
+            # DEL does not touch the CMS command counts asserted below.
+            self.client.execute_command('DEL key')
             if setup != '':
                 self.client.execute_command(setup)
-            
+            # Setup commands are valid writes and get replicated, so the replica's count for
+            # this prefix may already be non-zero. Snapshot it after the setup has synced and
+            # assert that the failing command does not increase it.
+            self.waitForReplicaToSyncUp(self.replicas[0])
+            replica_calls_before = self.replicas[0].client.info("Commandstats").get('cmdstat_' + prefix, {}).get('calls', 0)
+
             try:
                 self.client.execute_command(cmd)
                 assert False
@@ -166,6 +174,8 @@ class TestCMSReplication(ReplicationTestCase):
             primary_cmd_stats = self.client.info("Commandstats")['cmdstat_' + prefix]
             assert primary_cmd_stats["calls"] == expected_calls
             assert primary_cmd_stats["failed_calls"] == failed_calls
-            assert ('cmdstat_' + prefix) not in self.replicas[0].client.info("Commandstats")
+            self.waitForReplicaToSyncUp(self.replicas[0])
+            replica_calls_after = self.replicas[0].client.info("Commandstats").get('cmdstat_' + prefix, {}).get('calls', 0)
+            assert replica_calls_after == replica_calls_before
 
 

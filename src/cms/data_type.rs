@@ -1,9 +1,9 @@
+use crate::wrapper::cms_callback::cms_free;
 use valkey_module::native_types::ValkeyType;
 use valkey_module::raw;
 
 const CMS_TYPE_ENCODING_VERSION: i32 = 1;
 
-//Note this is mocked out for now.
 pub static CMS_TYPE: ValkeyType = ValkeyType::new(
     "cntmnskch",
     CMS_TYPE_ENCODING_VERSION,
@@ -15,7 +15,7 @@ pub static CMS_TYPE: ValkeyType = ValkeyType::new(
         digest: None,
 
         mem_usage: None,
-        free: None,
+        free: Some(cms_free),
 
         aux_load: None,
 
