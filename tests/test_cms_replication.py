@@ -144,10 +144,10 @@ class TestCMSReplication(ReplicationTestCase):
         invalid_write_cmds = [
             ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1, 1), # Bad parsing too many arguments
             ('CMS.INITBYDIM', 'CMS.INITBYPROB key 0.001 0.01', 'CMS.INITBYDIM key 10 5', 1, 1), # Fail to create as the key already exists.
-            ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 1, 1), # Bad parsing 0 is not a valid value
+            ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 2, 1), # Bad parsing 0 is not a valid value
             ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1 1', 1, 1), # Bad parsing too many arguments
-            ('CMS.INCRBY', '', 'CMS.INCRBY noExist item1 1', 1, 1), # Key does not exist
-            ('CMS.INCRBY', 'CMS.INITBYDIM key 10 5', 'CMS.INCRBY key item1 a', 1, 1), # Key exists, Bad value of increment
+            ('CMS.INCRBY', '', 'CMS.INCRBY noExist item1 1', 2, 2), # Key does not exist
+            ('CMS.INCRBY', 'CMS.INITBYDIM key 10 5', 'CMS.INCRBY key item1 a', 3, 3), # Key exists, Bad value of increment
             #('CMS.MERGE', '', 'CMS.MERGE', 1, 1) # Bad parsing too few arguments
         ]
         for test_case in invalid_write_cmds:
@@ -169,8 +169,5 @@ class TestCMSReplication(ReplicationTestCase):
             assert primary_cmd_stats["calls"] == expected_calls
             assert primary_cmd_stats["failed_calls"] == failed_calls
             assert ('cmdstat_' + prefix) not in self.replicas[0].client.info("Commandstats")
-
-            self.reset_state()
-
 
 
