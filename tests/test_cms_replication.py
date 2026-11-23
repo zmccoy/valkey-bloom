@@ -133,12 +133,13 @@ class TestCMSReplication(ReplicationTestCase):
         # Reset the stats for the invalid write commands testing below
         self.reset_state()
 
-        # Write commands with errors are not replicated. (prefix, setup, command, numberOfCalls)
+        # Write commands with errors are not replicated. (prefix, setup, command, number_of_calls, failed_calls)
         invalid_write_cmds = [
-            ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1), # Bad parsing too many arguments
+            ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1, 1), # Bad parsing too many arguments
+            ('CMS.INITBYDIM', 'CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM key 10 5', 3, 2) # Fail to create as the key already exists
             ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 1), # Bad parsing 0 is not a valid value
             ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1 1', 1), # Bad parsing too many arguments
-            ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1', 2), # Key does not exist
+            ('CMS.INCRBY', '', 'CMS.INCRBY noExist item1 1', 2), # Key does not exist
             ('CMS.INCRBY', 'CMS.INITBYDIM key 10 5', 'CMS.INCRBY key item1 a', 3), # Key exists, Bad value of increment 
         ]
         for test_case in invalid_write_cmds:
@@ -146,6 +147,7 @@ class TestCMSReplication(ReplicationTestCase):
             setup = test_case[1]
             cmd = test_case[2]
             expected_calls = test_case[3]
+            failed_calls = test_case[4]
 
             if setup != '':
                 self.client.execute_command(setup)
@@ -157,7 +159,7 @@ class TestCMSReplication(ReplicationTestCase):
                 pass
             primary_cmd_stats = self.client.info("Commandstats")['cmdstat_' + prefix]
             assert primary_cmd_stats["calls"] == expected_calls
-            assert primary_cmd_stats["failed_calls"] == expected_calls
+            assert primary_cmd_stats["failed_calls"] == failed_calls
             assert ('cmdstat_' + prefix) not in self.replicas[0].client.info("Commandstats")
 
 
