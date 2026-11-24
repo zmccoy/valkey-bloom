@@ -2,9 +2,9 @@ import pytest, os
 from valkey import ResponseError
 from valkeytestframework.valkey_test_case import ReplicationTestCase
 from valkeytestframework.conftest import resource_port_tracker
-from replication_test_mixin import ReplicationTestMixin
+from replication_test_mixin import ValkeyBloomReplicationTestCaseBase
 
-class TestBloomReplication(ReplicationTestMixin, ReplicationTestCase):
+class TestBloomReplication(ValkeyBloomReplicationTestCaseBase, ReplicationTestCase):
 
     # Global Parameterized Configs
     use_random_seed = 'no'

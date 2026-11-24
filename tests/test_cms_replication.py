@@ -2,9 +2,9 @@ import os
 from valkey import ResponseError
 from valkeytestframework.valkey_test_case import ReplicationTestCase
 from valkeytestframework.conftest import resource_port_tracker
-from replication_test_mixin import ReplicationTestMixin
+from replication_test_mixin import ValkeyBloomReplicationTestCaseBase
 
-class TestCMSReplication(ReplicationTestMixin, ReplicationTestCase):
+class TestCMSReplication(ValkeyBloomReplicationTestCaseBase, ReplicationTestCase):
 
     def reset_state(self):
         self.client.execute_command('FLUSHALL')

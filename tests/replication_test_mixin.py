@@ -1,11 +1,11 @@
 import pytest, os
 
-class ReplicationTestMixin:
+class ValkeyBloomReplicationTestCaseBase:
     """
     Shared replication test setup for the bloom and cms replication suites.
 
     Mix into a test class ahead of ReplicationTestCase, e.g.
-        class TestBloomReplication(ReplicationTestMixin, ReplicationTestCase):
+        class TestBloomReplication(ValkeyBloomReplicationTestCaseBase, ReplicationTestCase):
 
     Provides the autouse `setup_test` fixture (primary/replica server creation,
     either against an external server or a locally spawned one) and the
