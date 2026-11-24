@@ -83,6 +83,7 @@ class TestCMSReplication(ReplicationTestCase):
             assert self.client.execute_command('CMS.QUERY key item1') == [1]
             self.waitForReplicaToSyncUp(self.replicas[0])
             assert self.replicas[0].client.execute_command('CMS.QUERY key item1') == [1]
+            #TODO: Add info checks
 
             # cmd debug digest
             # TO BE IMPLEMENTED ONCE DIGEST IS IMPLEMENTED
@@ -110,6 +111,7 @@ class TestCMSReplication(ReplicationTestCase):
         assert self.replicas[0].client.execute_command('EXISTS key') == 1
 
         self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
+        #TODO: Add info checks
                 
         self.reset_state()
         
