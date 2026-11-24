@@ -2,41 +2,15 @@ import pytest, os
 from valkey import ResponseError
 from valkeytestframework.valkey_test_case import ReplicationTestCase
 from valkeytestframework.conftest import resource_port_tracker
+from replication_test_mixin import ReplicationTestMixin
 
-class TestBloomReplication(ReplicationTestCase):
+class TestBloomReplication(ReplicationTestMixin, ReplicationTestCase):
 
     # Global Parameterized Configs
     use_random_seed = 'no'
 
-    @pytest.fixture(autouse=True)
-    def setup_test(self, setup):
-        use_external = os.environ.get("VALKEY_EXTERNAL_SERVER", "false").lower() == "true"
-        
-        if use_external:
-            master_host = os.environ.get("VALKEY_HOST", "localhost")
-            master_port = int(os.environ.get("VALKEY_PORT", "6379"))
-            self.server, self.client = self.create_server(
-                testdir=self.testdir,
-                bind_ip=master_host,
-                port=master_port,
-                external_server=True
-            )
-            
-            replica_host = os.environ.get("VALKEY_REPLICA_HOST", "localhost")
-            replica_port = int(os.environ.get("VALKEY_REPLICA_PORT", "6380"))
-            replica_server, replica_client = self.create_server(
-                testdir=self.testdir,
-                bind_ip=replica_host,
-                port=replica_port,
-                external_server=True
-            )
-            
-            self.replicas = [replica_server]
-            self.num_replicas = 1
-        else:
-            self.args = {"enable-debug-command":"yes", 'loadmodule': os.getenv('MODULE_PATH'),'bf.bloom-use-random-seed': self.use_random_seed}
-            server_path = f"{os.path.dirname(os.path.realpath(__file__))}/build/binaries/{os.environ['SERVER_VERSION']}/valkey-server"
-            self.server, self.client = self.create_server(testdir = self.testdir,  server_path=server_path, args=self.args)
+    def module_load_args(self):
+        return {'bf.bloom-use-random-seed': self.use_random_seed}
 
     @pytest.fixture(autouse=True)
     def use_random_seed_fixture(self, bloom_config_parameterization):
@@ -44,15 +18,6 @@ class TestBloomReplication(ReplicationTestCase):
             self.use_random_seed = "yes"
         elif bloom_config_parameterization == "fixed-seed":
             self.use_random_seed = "no"
-
-    def validate_cmd_stats(self, primary_cmd, replica_cmd, expected_primary_calls, expected_replica_calls):
-        """
-            Helper fn to validate cmd count on primary & replica for non BF.RESERVE cases for object creation & item add.
-        """
-        primary_cmd_stats = self.client.info("Commandstats")['cmdstat_' + primary_cmd]
-        assert primary_cmd_stats["calls"] == expected_primary_calls
-        replica_cmd_stats = self.replicas[0].client.info("Commandstats")['cmdstat_' + replica_cmd]
-        assert replica_cmd_stats["calls"] == expected_replica_calls
 
     def validate_reserve_cmd_stats(self, primary_reserve_count, primary_add_count, replica_insert_count, replica_add_count):
         """
