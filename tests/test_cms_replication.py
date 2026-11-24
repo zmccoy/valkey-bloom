@@ -83,10 +83,16 @@ class TestCMSReplication(ReplicationTestCase):
 
             # New item added to an existing cms is replicated.
             item_add_cmd = test_case[2]
-            expected_calls = test_case[3] #NOTE: Missing test using this
+            expected_calls = test_case[3]
+
+            self.validate_cmd_stats(prefix, prefix, expected_calls, expected_calls)
+
             self.client.execute_command(item_add_cmd)
-            assert self.client.execute_command('CMS.QUERY key item1') == [1]
             self.waitForReplicaToSyncUp(self.replicas[0])
+
+            self.validate_cmd_stats('CMS.INCRBY', 'CMS.INCRBY', 1, 1)
+            
+            assert self.client.execute_command('CMS.QUERY key item1') == [1]
             assert self.replicas[0].client.execute_command('CMS.QUERY key item1') == [1]
            
             self.compare_info()
