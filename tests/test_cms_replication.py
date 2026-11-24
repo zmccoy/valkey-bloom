@@ -51,6 +51,11 @@ class TestCMSReplication(ReplicationTestCase):
         self.waitForReplicaToSyncUp(self.replicas[0])
         self.client.execute_command('CONFIG RESETSTAT')
         self.replicas[0].client.execute_command('CONFIG RESETSTAT')
+
+    def compare_info(self):
+        primary_info_call = self.client.execute_command('CMS.INFO key')
+        replica_info_call = self.replicas[0].client.execute_command('CMS.INFO key')
+        assert primary_info_call == replica_info_call
         
 
     def test_replication_behavior(self):
@@ -83,8 +88,9 @@ class TestCMSReplication(ReplicationTestCase):
             assert self.client.execute_command('CMS.QUERY key item1') == [1]
             self.waitForReplicaToSyncUp(self.replicas[0])
             assert self.replicas[0].client.execute_command('CMS.QUERY key item1') == [1]
-            #TODO: Add info checks
-
+           
+            self.compare_info()
+            
             # cmd debug digest
             # TO BE IMPLEMENTED ONCE DIGEST IS IMPLEMENTED
 
@@ -111,8 +117,9 @@ class TestCMSReplication(ReplicationTestCase):
         assert self.replicas[0].client.execute_command('EXISTS key') == 1
 
         self.validate_cmd_stats('CMS.MERGE', 'CMS.MERGE', 1, 1)
-        #TODO: Add info checks
-                
+        
+        self.compare_info()
+        
         self.reset_state()
         
         # Re-setup for read commands
@@ -140,19 +147,24 @@ class TestCMSReplication(ReplicationTestCase):
         # Reset the stats for the invalid write commands testing below
         self.reset_state()
 
-        # Write commands with errors are not replicated. Shape: (prefix, setup, command, number_of_calls, failed_calls)
+        # Write commands with errors are not replicated. Shape: (prefix, setup_commands, command, number_of_calls, failed_calls)
         invalid_write_cmds = [
-            ('CMS.INITBYDIM', '', 'CMS.INITBYDIM key 10 5 5', 1, 1), # Bad parsing too many arguments
-            ('CMS.INITBYDIM', 'CMS.INITBYPROB key 0.001 0.01', 'CMS.INITBYDIM key 10 5', 2, 2), # Fail to create as the key already exists.
-            ('CMS.INITBYPROB', '', 'CMS.INITBYPROB key 0 0.1', 2, 1), # Bad parsing 0 is not a valid value
-            ('CMS.INCRBY', '', 'CMS.INCRBY key item1 1 1', 1, 1), # Bad parsing too many arguments
-            ('CMS.INCRBY', '', 'CMS.INCRBY noExist item1 1', 2, 2), # Key does not exist
-            ('CMS.INCRBY', 'CMS.INITBYDIM key 10 5', 'CMS.INCRBY key item1 a', 3, 3), # Key exists, Bad value of increment
-            #('CMS.MERGE', '', 'CMS.MERGE', 1, 1) # Bad parsing too few arguments
+            ('CMS.INITBYDIM', [], 'CMS.INITBYDIM key 10 5 5', 1, 1), # Bad parsing too many arguments
+            ('CMS.INITBYDIM', ['CMS.INITBYPROB key 0.001 0.01'], 'CMS.INITBYDIM key 10 5', 1, 1), # Fail to create as the key already exists.
+            ('CMS.INITBYPROB', [], 'CMS.INITBYPROB key 0 0.1', 1, 1), # Bad parsing 0 is not a valid value
+            ('CMS.INCRBY', [], 'CMS.INCRBY key item1 1 1', 1, 1), # Bad parsing too many arguments
+            ('CMS.INCRBY', [], 'CMS.INCRBY noExist item1 1', 1, 1), # Key does not exist
+            ('CMS.INCRBY', ['CMS.INITBYDIM key 10 5'], 'CMS.INCRBY key item1 a', 1, 1), # Key exists, Bad value of increment
+            ('CMS.MERGE', [], 'CMS.MERGE key', 1, 1), # Bad parsing too few arguments
+            ('CMS.MERGE', [], 'CMS.MERGE key dest1 dest2', 1, 1), # Key does not exist
+            ('CMS.MERGE', ['CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM dest2 10 5'], 'CMS.MERGE key dest1 dest2', 1, 1), # Dest1 does not exist
+            ('CMS.MERGE', ['CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM dest1 10 5'], 'CMS.MERGE key dest1 dest2', 1, 1), # Dest2 does not exist
+            ('CMS.MERGE', ['CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM dest1 10 5', 'CMS.INITBYDIM dest2 10 5'], 'CMS.MERGE key dest1 dest2 WEIGHTS 3', 1, 1), # Source keys not equal to weights
+            ('CMS.MERGE', ['CMS.INITBYDIM key 10 5', 'CMS.INITBYDIM dest1 10 5', 'CMS.INITBYDIM dest2 10 5'], 'CMS.MERGE key dest1 dest2 WEIGU 3 3', 1, 1), # WEIGHTS keyword is wrong
         ]
         for test_case in invalid_write_cmds:
             prefix = test_case[0]
-            setup = test_case[1]
+            setup_cmds = test_case[1]
             cmd = test_case[2]
             expected_calls = test_case[3]
             failed_calls = test_case[4]
@@ -160,13 +172,10 @@ class TestCMSReplication(ReplicationTestCase):
             # Earlier cases may leave `key` behind; remove it so each setup starts clean.
             # DEL does not touch the CMS command counts asserted below.
             self.client.execute_command('DEL key')
-            if setup != '':
-                self.client.execute_command(setup)
-            # Setup commands are valid writes and get replicated, so the replica's count for
-            # this prefix may already be non-zero. Snapshot it after the setup has synced and
-            # assert that the failing command does not increase it.
+            for setup_command in setup_cmds:
+                self.client.execute_command(setup_command)
+
             self.waitForReplicaToSyncUp(self.replicas[0])
-            replica_calls_before = self.replicas[0].client.info("Commandstats").get('cmdstat_' + prefix, {}).get('calls', 0)
 
             try:
                 self.client.execute_command(cmd)
@@ -176,8 +185,8 @@ class TestCMSReplication(ReplicationTestCase):
             primary_cmd_stats = self.client.info("Commandstats")['cmdstat_' + prefix]
             assert primary_cmd_stats["calls"] == expected_calls
             assert primary_cmd_stats["failed_calls"] == failed_calls
-            self.waitForReplicaToSyncUp(self.replicas[0])
-            replica_calls_after = self.replicas[0].client.info("Commandstats").get('cmdstat_' + prefix, {}).get('calls', 0)
-            assert replica_calls_after == replica_calls_before
+            assert ('cmdstat_' + prefix) not in self.replicas[0].client.info("Commandstats")
+
+            self.reset_state()
 
 
